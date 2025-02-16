@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:bloom_care/screens/emergancy/emergancy_page_1.dart';
 import 'dart:async';
 
 class EmotionCheck extends StatefulWidget {
@@ -81,6 +82,20 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     });
     _animationController.stop();
     _animationController.reset();
+  }
+
+  void _onNavItemTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+    if (index == 1) {
+      // Navigate to EmergencyServicesScreen when Emergency tab is tapped
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const EmergencyServicesScreen()),
+      );
+    }
+    // Add navigation logic for other tabs if needed
   }
 
   @override
@@ -262,11 +277,7 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
             // Bottom Navigation Bar
             BottomNav(
               currentIndex: _currentIndex,
-              onTap: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
+              onTap: _onNavItemTapped, // Use the new _onNavItemTapped method
             ),
           ],
         ),
