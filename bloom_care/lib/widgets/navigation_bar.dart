@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 
 class BottomNav extends StatelessWidget {
   final int currentIndex;
-  final Function(int) onTap;
 
   const BottomNav({
-    super.key,
+    Key? key,
     required this.currentIndex,
-    required this.onTap,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -24,47 +22,37 @@ class BottomNav extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(0, 'assest/icons/home_icon.png', 'Home'),
-          _buildNavItem(1, 'assest/icons/emergency_icon.png', 'Emergency'),
-          _buildNavItem(2, 'assest/icons/care_taker_icon.png', 'Care Taker'),
-          _buildNavItem(3, 'assest/icons/profile_icon.png', 'Profile'),
+          _buildNavItem(context, 0, 'assest/icons/home_icon.png', '/'),
+          _buildNavItem(context, 1, 'assest/icons/emergency_icon.png', '/emergency'),
+          _buildNavItem(context, 2, 'assest/icons/notification_icon.png', '/notifications'),
+          _buildNavItem(context, 3, 'assest/icons/profile_icon.png', '/profile'),
         ],
       ),
     );
   }
 
-  Widget _buildNavItem(int index, String iconPath, String label) {
+  Widget _buildNavItem(BuildContext context, int index, String iconPath, String routeName) {
     final isSelected = currentIndex == index;
     return GestureDetector(
-      onTap: () => onTap(index),
+      onTap: () {
+        if (!isSelected) {
+          Navigator.pushReplacementNamed(context, routeName);
+        }
+      },
       child: Container(
-        width: 80,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFD3D1D1) : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-              child: Image.asset(
-                iconPath,
-                width: 24,
-                height: 24,
-                color: isSelected ? Colors.black87 : Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected ? Colors.black87 : Colors.black54,
-              ),
-            ),
-          ],
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFD3D1D1) : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Image.asset(
+            iconPath,
+            width: 24,
+            height: 24,
+            color: isSelected ? Colors.black87 : Colors.black54,
+          ),
         ),
       ),
     );

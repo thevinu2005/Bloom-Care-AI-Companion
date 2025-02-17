@@ -263,11 +263,6 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
               bottom: 0,
               child: BottomNav(
                 currentIndex: _currentIndex,
-                onTap: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
               ),
             ),
           ],

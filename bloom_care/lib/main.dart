@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:bloom_care/screens/emotion_check/emotion_check.dart';
 import 'package:bloom_care/screens/emergancy/emergancy_page_1.dart';
-import 'package:bloom_care/screens/emergancy/emergancy_page_2.dart'; // Add this import
+import 'package:bloom_care/screens/emergancy/emergancy_page_2.dart';
+// import 'package:bloom_care/screens/notifications/notifications_page.dart';
+// import 'package:bloom_care/screens/profile/caregiver_profile.dart';
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 void main() {
@@ -18,7 +19,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Bloom Care',
       debugShowCheckedModeBanner: false,
-      navigatorKey: navigatorKey,
       theme: ThemeData(
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: const Color(0xFF87CEEB),
@@ -27,7 +27,9 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const EmotionCheck(),
         '/emergency': (context) => const EmergencyServicesScreen(),
-        '/emergency2': (context) => const EmergencyPage2(), // Add this route
+        '/emergency2': (context) => const EmergencyPage2(),
+        // '/notifications': (context) => const NotificationsPage(),
+        // '/profile': (context) => const ProfilePage(),
       },
       navigatorObservers: [routeObserver],
     );

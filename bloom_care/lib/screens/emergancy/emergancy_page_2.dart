@@ -9,7 +9,6 @@ class EmergencyPage2 extends StatefulWidget {
 }
 
 class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProviderStateMixin {
-  int _currentIndex = 1;
   late AnimationController _animationController;
   late Animation<double> _animation;
   bool _isAnimating = false;
@@ -218,15 +217,7 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
         ),
       ),
       bottomNavigationBar: BottomNav(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          if (index != 1) {
-            Navigator.of(context).pushReplacementNamed('/');
-          }
-        },
+        currentIndex: 1,
       ),
     );
   }
