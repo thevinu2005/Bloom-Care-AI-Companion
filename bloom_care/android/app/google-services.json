@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "424038520627",
+    "project_id": "bloom-care-3710c",
+    "storage_bucket": "bloom-care-3710c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:424038520627:android:acc1636fe588b91650d046",
+        "android_client_info": {
+          "package_name": "com.example.BloomCare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3H4RaE8KYWn5MxBhbIupDwQZsBUY_BRc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:424038520627:android:f8643c08c4e36d5750d046",
+        "android_client_info": {
+          "package_name": "com.example.bloom_care"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3H4RaE8KYWn5MxBhbIupDwQZsBUY_BRc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
