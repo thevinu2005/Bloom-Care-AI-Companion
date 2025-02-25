@@ -1,13 +1,14 @@
+// lib/screens/emotion_check.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-
+import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:bloom_care/services/ml_service.dart';
+import 'package:bloom_care/services/emotion_response.dart';
 
 class EmotionCheck extends StatefulWidget {
   const EmotionCheck({super.key});
@@ -18,7 +19,7 @@ class EmotionCheck extends StatefulWidget {
 
 class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
-  bool _showChart = false;
+  bool _showResults = false;
   bool _showAvatar = true;
   bool _isRecording = false;
   bool _isAnalyzing = false;
@@ -27,11 +28,16 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
   
   final _audioRecorder = AudioRecorder();
   String? _recordedFilePath;
-  Map<String, dynamic>? _analysisResult;
+  EmotionResponse? _analysisResult;
 
   @override
   void initState() {
     super.initState();
+    _setupAnimation();
+    _requestPermissions();
+  }
+
+  void _setupAnimation() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -52,22 +58,20 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
         _animationController.forward();
       }
     });
-
-    _requestPermissions();
   }
 
   void _resetState() {
-  setState(() {
-    _showChart = false;
-    _showAvatar = true;
-    _isRecording = false;
-    _recordedFilePath = null;
-    _analysisResult = null;
-    _isAnalyzing = false;
-  });
-  _animationController.stop();
-  _animationController.reset();
-}
+    setState(() {
+      _showResults = false;
+      _showAvatar = true;
+      _isRecording = false;
+      _isAnalyzing = false;
+      _recordedFilePath = null;
+      _analysisResult = null;
+    });
+    _animationController.stop();
+    _animationController.reset();
+  }
 
   @override
   void dispose() {
@@ -75,159 +79,294 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     _audioRecorder.dispose();
     super.dispose();
   }
-
+  
   Future<void> _requestPermissions() async {
     final status = await Permission.microphone.request();
-    if (status != PermissionStatus.granted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Microphone permission is required to record audio'),
-          ),
-        );
-      }
+    if (status != PermissionStatus.granted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Microphone permission is required'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   Future<void> _startRecordingProcess() async {
     try {
-      if (await _audioRecorder.hasPermission()) {
-        final directory = await getTemporaryDirectory();
-        final path = '${directory.path}/audio_recording.m4a';
-        
-        await _audioRecorder.start(
-          RecordConfig(
-            encoder: AudioEncoder.aacLc,
-            bitRate: 128000,
-            sampleRate: 44100,
-          ),
-          path: path,
-        );
-        
-        setState(() {
-          _isRecording = true;
-          _showAvatar = false; // Only hide avatar when recording starts successfully
-          _showChart = false;
-          _analysisResult = null;
-          _recordedFilePath = path;
-        });
-        
-        _animationController.forward();
-      } else {
-        if (mounted) {
-          // Keep avatar visible during permission error
-          setState(() {
-            _isRecording = false;
-            _showAvatar = true;
-          });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Microphone permission not granted'),
-            ),
-          );
-        }
+      if (!await _audioRecorder.hasPermission()) {
+        throw Exception('Microphone permission not granted');
       }
+
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/audio_recording.wav';
+      
+      await _audioRecorder.start(
+        RecordConfig(
+          encoder: AudioEncoder.wav,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: path,
+      );
+      
+      setState(() {
+        _isRecording = true;
+        _showAvatar = false;
+        _showResults = false;
+        _analysisResult = null;
+        _recordedFilePath = path;
+      });
+      
+      _animationController.forward();
+      
     } catch (e) {
-      if (mounted) {
-        // Keep avatar visible during error
-        setState(() {
-          _isRecording = false;
-          _showAvatar = true;
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error starting recording: $e'),
-          ),
-        );
-      }
+      if (!mounted) return;
+      
+      setState(() {
+        _isRecording = false;
+        _showAvatar = true;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Recording error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   Future<void> _stopRecording() async {
-    if (_isRecording) {
-      try {
-        await _audioRecorder.stop();
-        
-        setState(() {
-          _isRecording = false;
-          _isAnalyzing = true;
-          _showAvatar = false; // Keep avatar hidden during analysis
-        });
-        
-        _animationController.stop();
-        _animationController.reset();
+    if (!_isRecording) return;
 
-        if (_recordedFilePath != null) {
-          await _uploadAndAnalyzeAudio(_recordedFilePath!);
-        }
-
-      } catch (e) {
-        setState(() {
-          _isRecording = false;
-          _isAnalyzing = false;
-          _showAvatar = true; // Show avatar on error
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error stopping recording: $e'),
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  Future<void> _uploadAndAnalyzeAudio(String path) async {
     try {
-      final uri = Uri.parse('YOUR_BACKEND_URL/analyze-mood');
-      final request = http.MultipartRequest('POST', uri);
+      await _audioRecorder.stop();
       
-      final file = await http.MultipartFile.fromPath(
-        'audio',
-        path,
-        filename: 'audio_recording.m4a',
-      );
-      request.files.add(file);
+      setState(() {
+        _isRecording = false;
+        _isAnalyzing = true;
+        _showAvatar = false;
+      });
+      
+      _animationController.stop();
+      _animationController.reset();
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final result = json.decode(response.body);
-        if (mounted) {
-          setState(() {
-            _isAnalyzing = false;
-            _showChart = true;
-            _showAvatar = false; // Keep avatar hidden when showing chart
-            _analysisResult = result;
-          });
-        }
-      } else {
-        throw Exception('Failed to upload audio: ${response.statusCode}');
+      if (_recordedFilePath != null) {
+        await _analyzeAudio(_recordedFilePath!);
       }
+
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isAnalyzing = false;
-          _showAvatar = true; // Show avatar on error
-          _showChart = false;
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error analyzing audio: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isRecording = false;
+        _isAnalyzing = false;
+        _showAvatar = true;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error stopping recording: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  // Update the build method to ensure avatar visibility is properly handled
+  Future<void> _analyzeAudio(String path) async {
+    if (!mounted) return;
+
+    try {
+      setState(() {
+        _isAnalyzing = true;
+        _showAvatar = false;
+        _showResults = false;
+        _analysisResult = null;
+      });
+
+      final file = File(path);
+      if (!await file.exists()) {
+        throw Exception('Audio file not found');
+      }
+
+      final response = await ApiService.uploadAudio(path);
+      
+      if (!mounted) return;
+
+      if (response.status == 'error') {
+        throw Exception(response.error ?? 'Analysis failed');
+      }
+
+      setState(() {
+        _isAnalyzing = false;
+        _showResults = true;
+        _showAvatar = false;
+        _analysisResult = response;
+      });
+
+      // Debug print to verify response
+      print('Analysis Result: ${response.result?.predictedEmotion}');
+      print('Probabilities: ${response.result?.probabilities}');
+
+    } catch (e) {
+      if (!mounted) return;
+
+      print('Analysis error: $e');
+      setState(() {
+        _isAnalyzing = false;
+        _showAvatar = true;
+        _showResults = false;
+        _analysisResult = null;
+      });
+
+      _showErrorSnackBar(e.toString(), path);
+    }
+  }
+
+  Widget _buildEmotionResults() {
+  if (_analysisResult?.result == null) {
+    return const SizedBox.shrink();
+  }
+  
+  final result = _analysisResult!.result!;
+  final sortedEmotions = result.probabilities.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+
+  // Generate colors for each emotion
+  final colors = [
+    const Color(0xFF7C77B9), // Purple
+    const Color(0xFF8BBABB), // Teal
+    const Color(0xFFBE9FE1), // Lavender
+    const Color(0xFFEDB1F1), // Pink
+    const Color(0xFFFFCBC1), // Peach
+    const Color(0xFFC4D7B2), // Sage
+    const Color(0xFFA0BFE0), // Blue
+    const Color(0xFFFFB4B4), // Coral
+  ];
+
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        'Detected Emotion: ${result.predictedEmotion.toUpperCase()}',
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+      const SizedBox(height: 20),
+      SizedBox(
+        height: 300,
+        child: Stack(
+          children: [
+            PieChart(
+              PieChartData(
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+                sections: List.generate(
+                  sortedEmotions.length,
+                  (index) {
+                    final emotion = sortedEmotions[index];
+                    return PieChartSectionData(
+                      color: colors[index % colors.length],
+                      value: emotion.value,
+                      title: '${(emotion.value * 100).toInt()}%',
+                      radius: 100,
+                      titleStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 20),
+      // Legend
+      Wrap(
+        spacing: 16,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
+        children: List.generate(
+          sortedEmotions.length,
+          (index) {
+            final emotion = sortedEmotions[index];
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: colors[index % colors.length],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  emotion.key,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    ],
+  );
+}
+
+  void _showErrorSnackBar(String errorMessage, String audioPath) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Analysis Error',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.white),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'RETRY',
+          textColor: Colors.white,
+          onPressed: () => _analyzeAudio(audioPath),
+        ),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -235,21 +374,17 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
       body: SafeArea(
         child: Column(
           children: [
-            // Back Button
             Padding(
               padding: const EdgeInsets.only(left: 20, top: 20),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
+                  onPressed: () => Navigator.pop(context),
                 ),
               ),
             ),
             
-            // Header Text
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -263,9 +398,9 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (!_showChart && !_isAnalyzing)
+                  if (!_showResults && !_isAnalyzing)
                     const Text(
-                      'How may I Assist you today?',
+                      'How may I assist you today?',
                       style: TextStyle(
                         fontSize: 20,
                         color: Colors.white70,
@@ -275,12 +410,11 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
               ),
             ),
 
-            // Avatar or Chart Section
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (_showAvatar) // Only show avatar when _showAvatar is true
+                  if (_showAvatar)
                     Container(
                       width: 200,
                       height: 200,
@@ -309,45 +443,15 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
                         ),
                       ],
                     ),
-                  if (_showChart && _analysisResult != null)
+                  if (_showResults)
                     Padding(
                       padding: const EdgeInsets.all(20),
-                      child: PieChart(
-                        PieChartData(
-                          sections: [
-                            PieChartSectionData(
-                              color: Colors.green,
-                              value: _analysisResult?['positive_score'] ?? 75,
-                              title: 'Good\n${_analysisResult?['positive_score']}%',
-                              radius: 100,
-                              titleStyle: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            PieChartSectionData(
-                              color: Colors.red,
-                              value: _analysisResult?['negative_score'] ?? 25,
-                              title: 'Bad\n${_analysisResult?['negative_score']}%',
-                              radius: 100,
-                              titleStyle: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                          sectionsSpace: 0,
-                          centerSpaceRadius: 40,
-                        ),
-                      ),
+                      child: _buildEmotionResults(),
                     ),
                 ],
               ),
             ),
 
-            // Recording Controls
             Padding(
               padding: const EdgeInsets.only(bottom: 100),
               child: Row(
@@ -379,7 +483,7 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
                         scale: _isRecording ? _scaleAnimation.value : 1.0,
                         child: GestureDetector(
                           onTap: () {
-                            if (_showChart) {
+                            if (_showResults) {
                               _resetState();
                             } else if (!_isRecording) {
                               _startRecordingProcess();
