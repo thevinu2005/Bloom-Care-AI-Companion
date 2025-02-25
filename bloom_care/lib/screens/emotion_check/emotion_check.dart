@@ -1,7 +1,14 @@
+// lib/screens/emotion_check.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:record/record.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
+import 'package:path_provider/path_provider.dart';
+import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:bloom_care/services/ml_service.dart';
+import 'package:bloom_care/services/emotion_response.dart';
 
 class EmotionCheck extends StatefulWidget {
   const EmotionCheck({super.key});
@@ -12,15 +19,25 @@ class EmotionCheck extends StatefulWidget {
 
 class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
-  bool _showChart = false;
+  bool _showResults = false;
   bool _showAvatar = true;
   bool _isRecording = false;
+  bool _isAnalyzing = false;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  
+  final _audioRecorder = AudioRecorder();
+  String? _recordedFilePath;
+  EmotionResponse? _analysisResult;
 
   @override
   void initState() {
     super.initState();
+    _setupAnimation();
+    _requestPermissions();
+  }
+
+  void _setupAnimation() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -43,41 +60,311 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     });
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  void _startRecordingProcess() {
-    setState(() {
-      _isRecording = true;
-      _showAvatar = false;
-      _showChart = false;
-    });
-
-    _animationController.forward();
-
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _isRecording = false;
-          _showChart = true;
-        });
-        _animationController.stop();
-        _animationController.reset();
-      }
-    });
-  }
-
   void _resetState() {
     setState(() {
-      _showChart = false;
+      _showResults = false;
       _showAvatar = true;
       _isRecording = false;
+      _isAnalyzing = false;
+      _recordedFilePath = null;
+      _analysisResult = null;
     });
     _animationController.stop();
     _animationController.reset();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _audioRecorder.dispose();
+    super.dispose();
+  }
+  
+  Future<void> _requestPermissions() async {
+    final status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Microphone permission is required'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _startRecordingProcess() async {
+    try {
+      if (!await _audioRecorder.hasPermission()) {
+        throw Exception('Microphone permission not granted');
+      }
+
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/audio_recording.wav';
+      
+      await _audioRecorder.start(
+        RecordConfig(
+          encoder: AudioEncoder.wav,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: path,
+      );
+      
+      setState(() {
+        _isRecording = true;
+        _showAvatar = false;
+        _showResults = false;
+        _analysisResult = null;
+        _recordedFilePath = path;
+      });
+      
+      _animationController.forward();
+      
+    } catch (e) {
+      if (!mounted) return;
+      
+      setState(() {
+        _isRecording = false;
+        _showAvatar = true;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Recording error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    if (!_isRecording) return;
+
+    try {
+      await _audioRecorder.stop();
+      
+      setState(() {
+        _isRecording = false;
+        _isAnalyzing = true;
+        _showAvatar = false;
+      });
+      
+      _animationController.stop();
+      _animationController.reset();
+
+      if (_recordedFilePath != null) {
+        await _analyzeAudio(_recordedFilePath!);
+      }
+
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isRecording = false;
+        _isAnalyzing = false;
+        _showAvatar = true;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error stopping recording: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _analyzeAudio(String path) async {
+    if (!mounted) return;
+
+    try {
+      setState(() {
+        _isAnalyzing = true;
+        _showAvatar = false;
+        _showResults = false;
+        _analysisResult = null;
+      });
+
+      final file = File(path);
+      if (!await file.exists()) {
+        throw Exception('Audio file not found');
+      }
+
+      final response = await ApiService.uploadAudio(path);
+      
+      if (!mounted) return;
+
+      if (response.status == 'error') {
+        throw Exception(response.error ?? 'Analysis failed');
+      }
+
+      setState(() {
+        _isAnalyzing = false;
+        _showResults = true;
+        _showAvatar = false;
+        _analysisResult = response;
+      });
+
+      // Debug print to verify response
+      print('Analysis Result: ${response.result?.predictedEmotion}');
+      print('Probabilities: ${response.result?.probabilities}');
+
+    } catch (e) {
+      if (!mounted) return;
+
+      print('Analysis error: $e');
+      setState(() {
+        _isAnalyzing = false;
+        _showAvatar = true;
+        _showResults = false;
+        _analysisResult = null;
+      });
+
+      _showErrorSnackBar(e.toString(), path);
+    }
+  }
+
+  Widget _buildEmotionResults() {
+  if (_analysisResult?.result == null) {
+    return const SizedBox.shrink();
+  }
+  
+  final result = _analysisResult!.result!;
+  final sortedEmotions = result.probabilities.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+
+  // Generate colors for each emotion
+  final colors = [
+    const Color(0xFF7C77B9), // Purple
+    const Color(0xFF8BBABB), // Teal
+    const Color(0xFFBE9FE1), // Lavender
+    const Color(0xFFEDB1F1), // Pink
+    const Color(0xFFFFCBC1), // Peach
+    const Color(0xFFC4D7B2), // Sage
+    const Color(0xFFA0BFE0), // Blue
+    const Color(0xFFFFB4B4), // Coral
+  ];
+
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        'Detected Emotion: ${result.predictedEmotion.toUpperCase()}',
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+      const SizedBox(height: 20),
+      SizedBox(
+        height: 300,
+        child: Stack(
+          children: [
+            PieChart(
+              PieChartData(
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+                sections: List.generate(
+                  sortedEmotions.length,
+                  (index) {
+                    final emotion = sortedEmotions[index];
+                    return PieChartSectionData(
+                      color: colors[index % colors.length],
+                      value: emotion.value,
+                      title: '${(emotion.value * 100).toInt()}%',
+                      radius: 100,
+                      titleStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 20),
+      // Legend
+      Wrap(
+        spacing: 16,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
+        children: List.generate(
+          sortedEmotions.length,
+          (index) {
+            final emotion = sortedEmotions[index];
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: colors[index % colors.length],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  emotion.key,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    ],
+  );
+}
+
+  void _showErrorSnackBar(String errorMessage, String audioPath) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Analysis Error',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.white),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'RETRY',
+          textColor: Colors.white,
+          onPressed: () => _analyzeAudio(audioPath),
+        ),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
   }
 
   @override
@@ -85,188 +372,150 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     return Scaffold(
       backgroundColor: const Color(0xFF6B84DC),
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.only(left: 20),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ),
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(
-                          fontSize: 32,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        children: [
-                          const TextSpan(text: 'Hello '),
-                          const TextSpan(
-                            text: 'Imsarie',
-                            style: TextStyle(fontWeight: FontWeight.normal),
-                          ),
-                          if (_showChart) const TextSpan(text: ',\nyou are in a good mood!'),
-                        ],
-                      ),
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Hello Imsarie',
+                    style: TextStyle(
+                      fontSize: 32,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                if (!_showChart)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'How may I Assist you today?',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.white70,
-                        ),
+                  if (!_showResults && !_isAnalyzing)
+                    const Text(
+                      'How may I assist you today?',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.white70,
                       ),
                     ),
-                  ),
-                if (_showAvatar) ...[
-                  const SizedBox(height: 60),
-                  Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assest/images/grandma.png',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
                 ],
-                if (_showChart)
-                  Expanded(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 60),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: PieChart(
-                              PieChartData(
-                                sections: [
-                                  PieChartSectionData(
-                                    color: Colors.green,
-                                    value: 75,
-                                    title: 'Good\n75%',
-                                    radius: 100,
-                                    titleStyle: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  PieChartSectionData(
-                                    color: Colors.red,
-                                    value: 25,
-                                    title: 'Bad\n25%',
-                                    radius: 100,
-                                    titleStyle: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                                sectionsSpace: 0,
-                                centerSpaceRadius: 40,
-                              ),
-                            ),
+              ),
+            ),
+
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_showAvatar)
+                    Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assest/images/grandma.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  if (_isAnalyzing)
+                    Column(
+                      children: const [
+                        CircularProgressIndicator(color: Colors.white),
+                        SizedBox(height: 20),
+                        Text(
+                          'Analyzing your mood...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                if (_isRecording)
-                  Expanded(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          CircularProgressIndicator(color: Colors.white),
-                          SizedBox(height: 20),
-                          Text(
-                            'Analyzing your mood...',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ],
-                      ),
+                  if (_showResults)
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: _buildEmotionResults(),
                     ),
-                  ),
-                const Spacer(),
-                // Microphone Button with Animation
-                AnimatedBuilder(
-                  animation: _scaleAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _isRecording ? _scaleAnimation.value : 1.0,
-                      child: GestureDetector(
-                        onTap: () {
-                          if (_showChart) {
-                            _resetState();
-                          } else if (!_isRecording) {
-                            _startRecordingProcess();
-                          }
-                        },
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          margin: const EdgeInsets.only(bottom: 100), // Increased bottom margin
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _isRecording
-                                ? const Color(0xFFFFC0CB).withOpacity(0.7)
-                                : const Color(0xFFFFC0CB),
-                          ),
-                          child: Icon(
-                            _isRecording ? Icons.mic : Icons.mic_none,
-                            size: 40,
-                            color: Colors.black,
-                          ),
+                ],
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.only(bottom: 100),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_isRecording) ...[
+                    GestureDetector(
+                      onTap: _stopRecording,
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.red.withOpacity(0.7),
+                        ),
+                        child: const Icon(
+                          Icons.stop,
+                          size: 40,
+                          color: Colors.white,
                         ),
                       ),
-                    );
-                  },
-                ),
-              ],
-            ),
-            // Bottom Navigation Bar positioned at the bottom
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: BottomNav(
-                currentIndex: _currentIndex,
+                    ),
+                    const SizedBox(width: 20),
+                  ],
+                  AnimatedBuilder(
+                    animation: _scaleAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _isRecording ? _scaleAnimation.value : 1.0,
+                        child: GestureDetector(
+                          onTap: () {
+                            if (_showResults) {
+                              _resetState();
+                            } else if (!_isRecording) {
+                              _startRecordingProcess();
+                            }
+                          },
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _isRecording
+                                  ? const Color(0xFFFFC0CB).withOpacity(0.7)
+                                  : const Color(0xFFFFC0CB),
+                            ),
+                            child: Icon(
+                              _isRecording ? Icons.mic : Icons.mic_none,
+                              size: 40,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomNav(
+        currentIndex: _currentIndex,
       ),
     );
   }

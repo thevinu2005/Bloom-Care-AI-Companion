@@ -39,19 +39,22 @@ class BottomNav extends StatelessWidget {
           Navigator.pushReplacementNamed(context, routeName);
         }
       },
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFD3D1D1) : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: Image.asset(
-            iconPath,
-            width: 24,
-            height: 24,
-            color: isSelected ? Colors.black87 : Colors.black54,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Container(
+          width: 60,
+          height: 80,
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFD3D1D1) : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Image.asset(
+              iconPath,
+              width: 24,
+              height: 24,
+              color: isSelected ? Colors.black87 : Colors.black54,
+            ),
           ),
         ),
       ),
