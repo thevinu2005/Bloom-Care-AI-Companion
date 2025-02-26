@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:bloom_care/services/ml_service.dart';
 import 'package:bloom_care/services/emotion_response.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EmotionCheck extends StatefulWidget {
   const EmotionCheck({super.key});
@@ -19,6 +20,7 @@ class EmotionCheck extends StatefulWidget {
 
 class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
+  String _userName = '';
   bool _showResults = false;
   bool _showAvatar = true;
   bool _isRecording = false;
@@ -35,6 +37,7 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     super.initState();
     _setupAnimation();
     _requestPermissions();
+    _getUserName();
   }
 
   void _setupAnimation() {
@@ -78,6 +81,15 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     _animationController.dispose();
     _audioRecorder.dispose();
     super.dispose();
+  }
+  Future<void> _getUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        // Use displayName if available, otherwise use email
+        _userName = user.displayName ?? user.email?.split('@')[0] ?? 'User';
+      });
+    }
   }
   
   Future<void> _requestPermissions() async {
@@ -235,14 +247,14 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
 
   // Generate colors for each emotion
   final colors = [
-    const Color(0xFF7C77B9), // Purple
-    const Color(0xFF8BBABB), // Teal
-    const Color(0xFFBE9FE1), // Lavender
-    const Color(0xFFEDB1F1), // Pink
+    const Color.fromARGB(255, 28, 16, 162), // Purple
+    const Color.fromARGB(255, 252, 252, 252), // Teal
+    const Color.fromARGB(255, 245, 255, 106), // Lavender
+    const Color.fromARGB(255, 243, 1, 182), // Pink
     const Color(0xFFFFCBC1), // Peach
-    const Color(0xFFC4D7B2), // Sage
-    const Color(0xFFA0BFE0), // Blue
-    const Color(0xFFFFB4B4), // Coral
+    const Color.fromARGB(255, 93, 103, 83), // Sage
+    const Color.fromARGB(255, 6, 208, 23), // Blue
+    const Color.fromARGB(255, 233, 1, 90), // Coral
   ];
 
   return Column(
@@ -390,8 +402,8 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Hello Imsarie',
+                  Text(
+                    'Hello $_userName',
                     style: TextStyle(
                       fontSize: 32,
                       color: Colors.white,

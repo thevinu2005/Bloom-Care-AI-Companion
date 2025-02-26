@@ -40,6 +40,10 @@ dependencies:
   permission_handler: ^10.2.0
   http: ^1.1.0
   path_provider: ^2.0.15
+  firebase_auth: ^5.5.0
+  cloud_firestore: ^5.6.4
+  firebase_storage: ^12.4.3
+  firebase_messaging: ^15.2.3
 
 dev_dependencies:
   flutter_test:
@@ -51,6 +55,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -96,3 +101,16 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true  # Generate Android icons
+  ios: true      # Generate iOS icons
+  image_path: "assest/images/app_icon.png"  # Path to your icon image
+  min_sdk_android: 21 # Android min sdk min:16, default 21
+  
+  # Optional: Customize adaptive icons for Android
+  adaptive_icon_background: "#ffffff" # only for Android 8.0 devices and above
+  adaptive_icon_foreground: "assest/images/app_icon.png" # only for Android 8.0 devices and above
+  
+  # Optional: Remove alpha channel for iOS
+  remove_alpha_ios: true
