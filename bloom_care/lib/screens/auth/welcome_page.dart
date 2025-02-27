@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'signup_page.dart';
+import 'login_screen.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({Key? key}) : super(key: key);
@@ -39,7 +41,7 @@ class WelcomePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   // Title Text
                   const Text(
-                    'Smart companionship, seamless care',
+                    'Smart companionship, seamless care',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w500,
@@ -51,7 +53,9 @@ class WelcomePage extends StatelessWidget {
                   // Sign In Button
                   ElevatedButton(
                     onPressed: () {
-                      // Add sign in logic
+                      Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const SignUpPage()),
+                         );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -74,7 +78,9 @@ class WelcomePage extends StatelessWidget {
                   // Login Button
                   ElevatedButton(
                     onPressed: () {
-                      // Add login logic
+                      Navigator.of(context).push(
+                            MaterialPageRoute(builder: (context) => const SignUpPage()),
+                         );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -95,6 +101,21 @@ class WelcomePage extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+          // Version number
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 24,
+            child: Text(
+              'Version 1.0',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
