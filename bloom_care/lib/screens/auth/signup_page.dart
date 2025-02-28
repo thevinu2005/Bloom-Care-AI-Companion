@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bloom_care/screens/auth/login_screen.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({Key? key}) : super(key: key);
@@ -131,7 +132,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/background_for_welsome.jpg'),
+                image: AssetImage('assest/images/background_for_welcome.jpg'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -179,6 +180,9 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                               GestureDetector(
                                 onTap: () {
                                   // Navigate to sign in page
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                                  );
                                 },
                                 child: const Text(
                                   'Sign in',
@@ -605,30 +609,30 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                           ),
                                         ),
                                         icon: Image.asset(
-                                          'asssst/images/google icon.png',
+                                          'assest/images/google icon.png',
                                           height: 24,
                                         ),
                                         label: const Text('Google'),
                                       ),
-                                      ElevatedButton.icon(
-                                        onPressed: () {
-                                          // Handle Facebook sign in
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.white,
-                                          foregroundColor: const Color(0xFF1877F2),
-                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                            side: BorderSide(color: Colors.grey.shade300),
-                                          ),
-                                        ),
-                                        icon: Image.asset(
-                                          'assest/images/facebook icon.png',
-                                          height: 24,
-                                        ),
-                                        label: const Text('Facebook'),
-                                      ),
+                                      // ElevatedButton.icon(
+                                      //   onPressed: () {
+                                      //     // Handle Facebook sign in
+                                      //   },
+                                      //   style: ElevatedButton.styleFrom(
+                                      //     backgroundColor: Colors.white,
+                                      //     foregroundColor: const Color(0xFF1877F2),
+                                      //     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                      //     shape: RoundedRectangleBorder(
+                                      //       borderRadius: BorderRadius.circular(12),
+                                      //       side: BorderSide(color: Colors.grey.shade300),
+                                      //     ),
+                                      //   ),
+                                      //   icon: Image.asset(
+                                      //     'assest/images/facebook icon.png',
+                                      //     height: 24,
+                                      //   ),
+                                      //   label: const Text('Facebook'),
+                                      // ),
                                     ],
                                   ),
                                   const SizedBox(height: 20),
