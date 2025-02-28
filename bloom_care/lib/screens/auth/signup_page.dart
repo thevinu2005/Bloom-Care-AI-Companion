@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bloom_care/screens/auth/auth_service.dart';
 import 'package:bloom_care/screens/auth/login_screen.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -12,26 +14,19 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   final _formKey = GlobalKey<FormState>();
-
+  
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _dateController = TextEditingController();
-  final _familyMemberController = TextEditingController();
-  
+
+  // Add this to your _SignUpPageState class
   String? _selectedUserType;
-  Set<String> _selectedHobbies = {};
-  Set<String> _selectedFavorites = {};
+  final _familyMemberController = TextEditingController();
+  final Set<String> _selectedHobbies = {};
+  final Set<String> _selectedFavorites = {};
 
-  final List<String> _hobbies = [
-    'Reading', 'Gardening', 'Cooking', 'Walking',
-    'Music', 'Crafts', 'Chess', 'Television'
-  ];
-
-  final List<String> _favorites = [
-    'Nature', 'Classical Music', 'Movies', 'Family Time',
-    'Tea', 'Coffee', 'Books', 'Art'
-  ];
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
@@ -60,39 +55,8 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
     _passwordController.dispose();
     _dateController.dispose();
     _familyMemberController.dispose();
+    // ... rest of your dispose code
     super.dispose();
-  }
-
-  Widget _buildSelectionButton(String text, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(right: 8, bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6B84DC) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color(0xFF6B84DC),
-            width: 1,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: const Color(0xFF6B84DC).withOpacity(0.3),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            )
-          ] : null,
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isSelected ? Colors.white : const Color(0xFF6B84DC),
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -132,7 +96,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assest/images/background_for_welcome.jpg'),
+                image: AssetImage('assets/images/background_for_welsome.jpg'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -157,6 +121,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Sign Up Text
                           const Text(
                             'Sign Up',
                             style: TextStyle(
@@ -167,6 +132,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                             ),
                           ),
                           const SizedBox(height: 8),
+                          // Already registered text
                           Row(
                             children: [
                               const Text(
@@ -179,10 +145,9 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                               ),
                               GestureDetector(
                                 onTap: () {
-                                  // Navigate to sign in page
-                                  // Navigator.of(context).push(
-                                  //   MaterialPageRoute(builder: (context) => const LoginPage()),
-                                  // );
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(builder: (context) => const SignUpPage()),
+                                  );
                                 },
                                 child: const Text(
                                   'Sign in',
@@ -212,8 +177,9 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                       child: Column(
                         children: [
                           const SizedBox(height: 30),
+                          // Illustration
                           Image.asset(
-                            'assest/images/signup.png',
+                            'assets/images/signup_illustration.png', // Add your illustration here
                             height: 200,
                             fit: BoxFit.contain,
                           ),
@@ -224,6 +190,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                               key: _formKey,
                               child: Column(
                                 children: [
+                                  // Name Field
                                   TextFormField(
                                     controller: _nameController,
                                     keyboardType: TextInputType.name,
@@ -262,6 +229,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+                                  // Email Field
                                   TextFormField(
                                     controller: _emailController,
                                     keyboardType: TextInputType.emailAddress,
@@ -303,11 +271,12 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+                                  // Password Field
                                   TextFormField(
                                     controller: _passwordController,
                                     obscureText: true,
                                     keyboardType: TextInputType.visiblePassword,
-                                    textInputAction: TextInputAction.next,
+                                    textInputAction: TextInputAction.done,
                                     style: const TextStyle(color: Colors.black87),
                                     decoration: InputDecoration(
                                       labelText: 'Password',
@@ -345,6 +314,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+                                  // Date of Birth Field
                                   TextFormField(
                                     controller: _dateController,
                                     readOnly: true,
@@ -383,6 +353,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+                                  // User Type Dropdown
                                   DropdownButtonFormField<String>(
                                     value: _selectedUserType,
                                     decoration: InputDecoration(
@@ -435,6 +406,8 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+
+                                  // Conditional Family Member Field
                                   if (_selectedUserType == 'family_member')
                                     TextFormField(
                                       controller: _familyMemberController,
@@ -473,75 +446,8 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                         return null;
                                       },
                                     ),
-                                  if (_selectedUserType == 'elder')
-                                    Container(
-                                      width: double.infinity,
-                                      margin: const EdgeInsets.only(bottom: 20),
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.grey.withOpacity(0.1),
-                                            spreadRadius: 1,
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Select Your Hobbies',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Wrap(
-                                            children: _hobbies.map((hobby) => _buildSelectionButton(
-                                              hobby,
-                                              _selectedHobbies.contains(hobby),
-                                              () => setState(() {
-                                                if (_selectedHobbies.contains(hobby)) {
-                                                  _selectedHobbies.remove(hobby);
-                                                } else {
-                                                  _selectedHobbies.add(hobby);
-                                                }
-                                              }),
-                                            )).toList(),
-                                          ),
-                                          const SizedBox(height: 20),
-                                          const Text(
-                                            'Select Your Favorites',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Wrap(
-                                            children: _favorites.map((favorite) => _buildSelectionButton(
-                                              favorite,
-                                              _selectedFavorites.contains(favorite),
-                                              () => setState(() {
-                                                if (_selectedFavorites.contains(favorite)) {
-                                                  _selectedFavorites.remove(favorite);
-                                                } else {
-                                                  _selectedFavorites.add(favorite);
-                                                }
-                                              }),
-                                            )).toList(),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
                                   const SizedBox(height: 40),
+                                  // Sign Up Button
                                   SizedBox(
                                     width: 60,
                                     height: 60,
@@ -566,6 +472,19 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                                 : null,
                                           };
                                           // Process the userData
+                                          
+                                          // Show success message
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Sign up successful!'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                          
+                                          // Navigate to login page
+                                          Navigator.of(context).pushReplacement(
+                                            MaterialPageRoute(builder: (context) => const SignUpPage()),
+                                          );
                                         }
                                       },
                                       style: ElevatedButton.styleFrom(
@@ -583,21 +502,38 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  const Text(
-                                    'Or sign up with',
-                                    style: TextStyle(
-                                      color: Colors.black54,
-                                      fontSize: 14,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 20),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                     children: [
                                       ElevatedButton.icon(
-                                        onPressed: () {
-                                          // Handle Google sign in
+                                        onPressed: () async {
+                                          try {
+                                            final UserCredential? result = await _authService.signInWithGoogle();
+                                            if (result != null && result.user != null) {
+                                              setState(() {
+                                                _nameController.text = result.user!.displayName ?? '';
+                                                _emailController.text = result.user!.email ?? '';
+                                              });
+                                              
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Successfully signed in with Google'),
+                                                    backgroundColor: Colors.green,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          } catch (e) {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Error signing in with Google: $e'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          }
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.white,
@@ -609,33 +545,58 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                           ),
                                         ),
                                         icon: Image.asset(
-                                          'assest/images/google icon.png',
+                                          'assets/images/google_logo.png',
                                           height: 24,
                                         ),
                                         label: const Text('Google'),
                                       ),
-                                      // ElevatedButton.icon(
-                                      //   onPressed: () {
-                                      //     // Handle Facebook sign in
-                                      //   },
-                                      //   style: ElevatedButton.styleFrom(
-                                      //     backgroundColor: Colors.white,
-                                      //     foregroundColor: const Color(0xFF1877F2),
-                                      //     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                      //     shape: RoundedRectangleBorder(
-                                      //       borderRadius: BorderRadius.circular(12),
-                                      //       side: BorderSide(color: Colors.grey.shade300),
-                                      //     ),
-                                      //   ),
-                                      //   icon: Image.asset(
-                                      //     'assest/images/facebook icon.png',
-                                      //     height: 24,
-                                      //   ),
-                                      //   label: const Text('Facebook'),
-                                      // ),
+                                      ElevatedButton.icon(
+                                        onPressed: () async {
+                                          try {
+                                            final UserCredential? result = await _authService.signInWithFacebook();
+                                            if (result != null && result.user != null) {
+                                              setState(() {
+                                                _nameController.text = result.user!.displayName ?? '';
+                                                _emailController.text = result.user!.email ?? '';
+                                              });
+                                              
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Successfully signed in with Facebook'),
+                                                    backgroundColor: Colors.green,
+                                                  ),
+                                                );
+                                              }
+                                          }
+                                          } catch (e) {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Error signing in with Facebook: $e'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.white,
+                                          foregroundColor: const Color(0xFF1877F2),
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            side: BorderSide(color: Colors.grey.shade300),
+                                          ),
+                                        ),
+                                        icon: Image.asset(
+                                          'assets/images/facebook_logo.png',
+                                          height: 24,
+                                        ),
+                                        label: const Text('Facebook'),
+                                      ),
                                     ],
                                   ),
-                                  const SizedBox(height: 20),
                                 ],
                               ),
                             ),
@@ -653,3 +614,4 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
     );
   }
 }
+
