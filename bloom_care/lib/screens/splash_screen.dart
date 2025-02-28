@@ -1,27 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-void main() {
-  runApp(const BloomCareApp());
-}
-
-class BloomCareApp extends StatelessWidget {
-  const BloomCareApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'BloomCare',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: const SplashScreen(),
-    );
-  }
-}
-
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -40,7 +19,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 6),
+      duration: const Duration(seconds: 2), // Reduced to fit within 3 seconds
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -50,8 +29,9 @@ class _SplashScreenState extends State<SplashScreen>
     );
     _controller.forward();
 
-    Timer(const Duration(seconds: 6), () {
-      // Navigate to home screen after animation
+    // Navigate after exactly 3 seconds
+    Timer(const Duration(seconds: 3), () {
+      Navigator.pushReplacementNamed(context, '/');
     });
   }
 
@@ -136,3 +116,4 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
+
