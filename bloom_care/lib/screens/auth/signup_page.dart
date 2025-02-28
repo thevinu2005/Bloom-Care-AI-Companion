@@ -96,7 +96,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/background_for_welsome.jpg'),
+                image: AssetImage('assest/images/background_for_welcome.jpg'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -179,7 +179,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                           const SizedBox(height: 30),
                           // Illustration
                           Image.asset(
-                            'assets/images/signup_illustration.png', // Add your illustration here
+                            'assest/images/signup.png', // Add your illustration here
                             height: 200,
                             fit: BoxFit.contain,
                           ),
@@ -483,7 +483,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                           
                                           // Navigate to login page
                                           Navigator.of(context).pushReplacement(
-                                            MaterialPageRoute(builder: (context) => const SignUpPage()),
+                                            MaterialPageRoute(builder: (context) => const LoginPage()),
                                           );
                                         }
                                       },
@@ -545,56 +545,12 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                           ),
                                         ),
                                         icon: Image.asset(
-                                          'assets/images/google_logo.png',
+                                          'assest/images/google icon.png',
                                           height: 24,
                                         ),
                                         label: const Text('Google'),
                                       ),
-                                      ElevatedButton.icon(
-                                        onPressed: () async {
-                                          try {
-                                            final UserCredential? result = await _authService.signInWithFacebook();
-                                            if (result != null && result.user != null) {
-                                              setState(() {
-                                                _nameController.text = result.user!.displayName ?? '';
-                                                _emailController.text = result.user!.email ?? '';
-                                              });
-                                              
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Successfully signed in with Facebook'),
-                                                    backgroundColor: Colors.green,
-                                                  ),
-                                                );
-                                              }
-                                          }
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Error signing in with Facebook: $e'),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
-                                          }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.white,
-                                          foregroundColor: const Color(0xFF1877F2),
-                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                            side: BorderSide(color: Colors.grey.shade300),
-                                          ),
-                                        ),
-                                        icon: Image.asset(
-                                          'assets/images/facebook_logo.png',
-                                          height: 24,
-                                        ),
-                                        label: const Text('Facebook'),
-                                      ),
+                                      
                                     ],
                                   ),
                                 ],
