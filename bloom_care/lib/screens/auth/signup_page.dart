@@ -26,6 +26,16 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
   final Set<String> _selectedHobbies = {};
   final Set<String> _selectedFavorites = {};
 
+  final List<String> _hobbies = [
+    'Reading', 'Gardening', 'Cooking', 'Walking',
+    'Music', 'Crafts', 'Chess', 'Television'
+  ];
+
+  final List<String> _favorites = [
+    'Nature', 'Classical Music', 'Movies', 'Family Time',
+    'Tea', 'Coffee', 'Books', 'Art'
+  ];
+
   final AuthService _authService = AuthService();
 
   @override
@@ -84,6 +94,38 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
         _dateController.text = "${picked.day}/${picked.month}/${picked.year}";
       });
     }
+  }
+
+  Widget _buildSelectionButton(String text, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 8, bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF6B84DC) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFF6B84DC),
+            width: 1,
+          ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: const Color(0xFF6B84DC).withOpacity(0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            )
+          ] : null,
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isSelected ? Colors.white : const Color(0xFF6B84DC),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -150,7 +192,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                   );
                                 },
                                 child: const Text(
-                                  'Login now',
+                                  'Sign in',
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.white,
@@ -446,6 +488,75 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                         return null;
                                       },
                                     ),
+                                  const SizedBox(height: 20),
+                                  if (_selectedUserType == 'elder')
+                                    Container(
+                                      width: double.infinity,
+                                      margin: const EdgeInsets.only(bottom: 20),
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.grey.withOpacity(0.1),
+                                            spreadRadius: 1,
+                                            blurRadius: 5,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Select Your Hobbies',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Wrap(
+                                            children: _hobbies.map((hobby) => _buildSelectionButton(
+                                              hobby,
+                                              _selectedHobbies.contains(hobby),
+                                              () => setState(() {
+                                                if (_selectedHobbies.contains(hobby)) {
+                                                  _selectedHobbies.remove(hobby);
+                                                } else {
+                                                  _selectedHobbies.add(hobby);
+                                                }
+                                              }),
+                                            )).toList(),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          const Text(
+                                            'Select Your Favorites',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Wrap(
+                                            children: _favorites.map((favorite) => _buildSelectionButton(
+                                              favorite,
+                                              _selectedFavorites.contains(favorite),
+                                              () => setState(() {
+                                                if (_selectedFavorites.contains(favorite)) {
+                                                  _selectedFavorites.remove(favorite);
+                                                } else {
+                                                  _selectedFavorites.add(favorite);
+                                                }
+                                              }),
+                                            )).toList(),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   const SizedBox(height: 40),
                                   // Sign Up Button
                                   SizedBox(
@@ -454,6 +565,19 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     child: ElevatedButton(
                                       onPressed: () {
                                         if (_formKey.currentState!.validate()) {
+                                          // Additional validation for elder user type
+                                          if (_selectedUserType == 'elder' && 
+                                              _selectedHobbies.isEmpty && 
+                                              _selectedFavorites.isEmpty) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Please select at least one hobby and favorite'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                            return;
+                                          }
+
                                           // Handle sign up logic
                                           final userData = {
                                             'name': _nameController.text,
@@ -471,7 +595,6 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                                 ? _selectedFavorites.toList() 
                                                 : null,
                                           };
-                                          // Process the userData
                                           
                                           // Show success message
                                           ScaffoldMessenger.of(context).showSnackBar(
@@ -550,7 +673,6 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                         ),
                                         label: const Text('Google'),
                                       ),
-                                      
                                     ],
                                   ),
                                 ],

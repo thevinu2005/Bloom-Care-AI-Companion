@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bloom_care/screens/auth/signup_page.dart';
+import 'package:bloom_care/screens/home/elders_home.dart';
 
 
 class LoginPage extends StatefulWidget {
@@ -252,7 +253,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     child: ElevatedButton(
                                       onPressed: () {
                                         if (_formKey.currentState!.validate()) {
-                                          // Handle login logic
+                                          Navigator.of(context).pushReplacement(
+                                            MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
+                                          );
                                         }
                                       },
                                       style: ElevatedButton.styleFrom(
