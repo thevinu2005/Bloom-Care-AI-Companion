@@ -163,9 +163,9 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                       duration: const Duration(milliseconds: 200),
                       child: ElevatedButton(
                         onPressed: () {
-                          // Navigator.of(context).push(
-                                  //   MaterialPageRoute(builder: (context) => const LoginPage()),
-                                  // );
+                          Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                                  );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white.withOpacity(0.9),

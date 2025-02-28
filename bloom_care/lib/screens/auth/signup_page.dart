@@ -146,11 +146,11 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                               GestureDetector(
                                 onTap: () {
                                   Navigator.of(context).pushReplacement(
-                                    MaterialPageRoute(builder: (context) => const SignUpPage()),
+                                    MaterialPageRoute(builder: (context) => const LoginPage()),
                                   );
                                 },
                                 child: const Text(
-                                  'Sign in',
+                                  'Login now',
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.white,

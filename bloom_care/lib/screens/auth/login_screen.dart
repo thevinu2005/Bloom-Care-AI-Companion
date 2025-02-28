@@ -135,11 +135,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         children: [
                           const SizedBox(height: 60),
                           Image.asset(
-                            'assest/images/login.png',
+                            'assest/images/signup.png',
                             height: 200,
                             fit: BoxFit.contain,
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 10),
                           Padding(
                             padding: const EdgeInsets.all(24.0),
                             child: Form(
@@ -232,9 +232,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     alignment: Alignment.centerRight,
                                     child: TextButton(
                                       onPressed: () {
-                                          Navigator.of(context).push(
-                                          MaterialPageRoute(builder: (context) => const SignUpPage()),
-                                        );
+                                        //   Navigator.of(context).push(
+                                        //   MaterialPageRoute(builder: (context) => const SignUpPage()),
+                                        // );
                                       },
                                       child: const Text(
                                         'Forgot Password?',
@@ -301,25 +301,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                           height: 24,
                                         ),
                                         label: const Text('Google'),
-                                      ),
-                                      ElevatedButton.icon(
-                                        onPressed: () {
-                                          // Handle Facebook sign in
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.white,
-                                          foregroundColor: const Color(0xFF1877F2),
-                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                            side: BorderSide(color: Colors.grey.shade300),
-                                          ),
-                                        ),
-                                        icon: Image.asset(
-                                          'assest/images/facebook icon.png',
-                                          height: 24,
-                                        ),
-                                        label: const Text('Facebook'),
                                       ),
                                     ],
                                   ),
