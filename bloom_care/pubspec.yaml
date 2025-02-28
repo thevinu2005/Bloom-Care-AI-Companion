@@ -41,6 +41,9 @@ dependencies:
   http: ^1.1.0
   path_provider: ^2.0.15
   google_fonts: ^6.1.0
+  google_sign_in: ^6.1.6
+  flutter_facebook_auth: ^6.0.3
+  firebase_auth: ^5.5.0
 
 dev_dependencies:
   flutter_test:
