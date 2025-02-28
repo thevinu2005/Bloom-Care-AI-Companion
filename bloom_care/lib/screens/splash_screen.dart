@@ -44,74 +44,89 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.lightBlueAccent.withOpacity(0.8),
-              Colors.white.withOpacity(0.8),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: const [0.2, 0.8],
+      body: Stack(
+        children: [
+          // Background Image
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assest/images/splash screen background .png'), // Add your background image here
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
-        ),
-        child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.lightBlueAccent.withOpacity(0.5),
-                          blurRadius: 20,
-                          spreadRadius: 5,
+          // Gradient Overlay
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF6B84DC).withOpacity(0.8), // Increased opacity for better visibility
+                  Colors.white.withOpacity(0.9),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                stops: const [0.2, 0.8],
+              ),
+            ),
+          ),
+          // Content
+          Center(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6B84DC).withOpacity(0.5),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.favorite,
+                        size: 100,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'BloomCare',
+                    style: TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6B84DC),
+                      shadows: [
+                        Shadow(
+                          blurRadius: 10,
+                          color: Colors.white,
+                          offset: Offset(2, 2),
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.favorite,
-                      size: 100,
-                      color: Colors.white,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Your AI Companion for Elderly Care',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF6B84DC),
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'BloomCare',
-                  style: TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.lightBlueAccent,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 10,
-                        color: Colors.white,
-                        offset: Offset(2, 2),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Your AI Companion for Elderly Care',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.lightBlueAccent,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

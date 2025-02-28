@@ -5,6 +5,7 @@ import 'package:bloom_care/screens/emotion_check/emotion_check.dart';
 import 'package:bloom_care/screens/emergancy/emergancy_page_1.dart';
 import 'package:bloom_care/screens/emergancy/emergancy_page_2.dart';
 import 'package:bloom_care/screens/splash_screen.dart';
+import 'package:bloom_care/screens/home/elders_home.dart';
 // import 'package:bloom_care/screens/notifications/notifications_page.dart';
 // import 'package:bloom_care/screens/profile/caregiver_profile.dart';
 
@@ -33,7 +34,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/splash',
       routes: {
         '/splash': (context) => const SplashScreen(),
-        '/': (context) => const EmotionCheck(),
+        '/': (context) => const BloomCareHomePage(),
         '/emergency': (context) => const EmergencyServicesScreen(),
         '/emergency2': (context) => const EmergencyPage2(),
         // '/notifications': (context) => const NotificationsPage(),
