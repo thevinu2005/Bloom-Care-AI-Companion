@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:bloom_care/screens/emotion_check/emotion_check.dart';
 import 'package:bloom_care/screens/emergancy/emergancy_page_1.dart';
 import 'package:bloom_care/screens/emergancy/emergancy_page_2.dart';
 import 'package:bloom_care/screens/splash_screen.dart';
 import 'package:bloom_care/screens/home/elders_home.dart';
+import 'package:bloom_care/screens/auth/welcome_page.dart';
 // import 'package:bloom_care/screens/notifications/notifications_page.dart';
 // import 'package:bloom_care/screens/profile/caregiver_profile.dart';
 
@@ -34,6 +34,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/splash',
       routes: {
         '/splash': (context) => const SplashScreen(),
+        '/welcome': (context) => const WelcomePage(),
         '/': (context) => const BloomCareHomePage(),
         '/emergency': (context) => const EmergencyServicesScreen(),
         '/emergency2': (context) => const EmergencyPage2(),
