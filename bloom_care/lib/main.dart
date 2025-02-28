@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:bloom_care/screens/emotion_check/emotion_check.dart';
 import 'package:bloom_care/screens/emergancy/emergancy_page_1.dart';
 import 'package:bloom_care/screens/emergancy/emergancy_page_2.dart';
+import 'package:bloom_care/screens/splash_screen.dart';
+import 'package:bloom_care/screens/home/elders_home.dart';
+import 'package:bloom_care/screens/auth/welcome_page.dart';
 // import 'package:bloom_care/screens/notifications/notifications_page.dart';
 // import 'package:bloom_care/screens/profile/caregiver_profile.dart';
 
@@ -11,9 +13,9 @@ final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-await Firebase.initializeApp(
-  options: DefaultFirebaseOptions.currentPlatform,
-);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -29,9 +31,11 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: const Color(0xFF87CEEB),
       ),
-      initialRoute: '/',
+      initialRoute: '/splash',
       routes: {
-        '/': (context) => const EmotionCheck(),
+        '/splash': (context) => const SplashScreen(),
+        '/welcome': (context) => const WelcomePage(),
+        '/': (context) => const BloomCareHomePage(),
         '/emergency': (context) => const EmergencyServicesScreen(),
         '/emergency2': (context) => const EmergencyPage2(),
         // '/notifications': (context) => const NotificationsPage(),
@@ -41,3 +45,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+

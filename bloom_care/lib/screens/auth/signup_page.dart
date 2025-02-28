@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bloom_care/screens/auth/auth_service.dart';
 import 'package:bloom_care/screens/auth/login_screen.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -12,16 +14,17 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   final _formKey = GlobalKey<FormState>();
-
+  
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _dateController = TextEditingController();
-  final _familyMemberController = TextEditingController();
-  
+
+  // Add this to your _SignUpPageState class
   String? _selectedUserType;
-  Set<String> _selectedHobbies = {};
-  Set<String> _selectedFavorites = {};
+  final _familyMemberController = TextEditingController();
+  final Set<String> _selectedHobbies = {};
+  final Set<String> _selectedFavorites = {};
 
   final List<String> _hobbies = [
     'Reading', 'Gardening', 'Cooking', 'Walking',
@@ -32,6 +35,8 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
     'Nature', 'Classical Music', 'Movies', 'Family Time',
     'Tea', 'Coffee', 'Books', 'Art'
   ];
+
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
@@ -60,7 +65,35 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
     _passwordController.dispose();
     _dateController.dispose();
     _familyMemberController.dispose();
+    // ... rest of your dispose code
     super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF6B84DC),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _dateController.text = "${picked.day}/${picked.month}/${picked.year}";
+      });
+    }
   }
 
   Widget _buildSelectionButton(String text, bool isSelected, VoidCallback onTap) {
@@ -93,33 +126,6 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
         ),
       ),
     );
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF6B84DC),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        _dateController.text = "${picked.day}/${picked.month}/${picked.year}";
-      });
-    }
   }
 
   @override
@@ -157,6 +163,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Sign Up Text
                           const Text(
                             'Sign Up',
                             style: TextStyle(
@@ -167,6 +174,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                             ),
                           ),
                           const SizedBox(height: 8),
+                          // Already registered text
                           Row(
                             children: [
                               const Text(
@@ -179,8 +187,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                               ),
                               GestureDetector(
                                 onTap: () {
-                                  // Navigate to sign in page
-                                  Navigator.of(context).push(
+                                  Navigator.of(context).pushReplacement(
                                     MaterialPageRoute(builder: (context) => const LoginPage()),
                                   );
                                 },
@@ -212,8 +219,9 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                       child: Column(
                         children: [
                           const SizedBox(height: 30),
+                          // Illustration
                           Image.asset(
-                            'assest/images/signup.png',
+                            'assest/images/signup.png', // Add your illustration here
                             height: 200,
                             fit: BoxFit.contain,
                           ),
@@ -224,6 +232,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                               key: _formKey,
                               child: Column(
                                 children: [
+                                  // Name Field
                                   TextFormField(
                                     controller: _nameController,
                                     keyboardType: TextInputType.name,
@@ -262,6 +271,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+                                  // Email Field
                                   TextFormField(
                                     controller: _emailController,
                                     keyboardType: TextInputType.emailAddress,
@@ -303,11 +313,12 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+                                  // Password Field
                                   TextFormField(
                                     controller: _passwordController,
                                     obscureText: true,
                                     keyboardType: TextInputType.visiblePassword,
-                                    textInputAction: TextInputAction.next,
+                                    textInputAction: TextInputAction.done,
                                     style: const TextStyle(color: Colors.black87),
                                     decoration: InputDecoration(
                                       labelText: 'Password',
@@ -345,6 +356,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+                                  // Date of Birth Field
                                   TextFormField(
                                     controller: _dateController,
                                     readOnly: true,
@@ -383,6 +395,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+                                  // User Type Dropdown
                                   DropdownButtonFormField<String>(
                                     value: _selectedUserType,
                                     decoration: InputDecoration(
@@ -435,6 +448,8 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
+
+                                  // Conditional Family Member Field
                                   if (_selectedUserType == 'family_member')
                                     TextFormField(
                                       controller: _familyMemberController,
@@ -473,6 +488,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                         return null;
                                       },
                                     ),
+                                  const SizedBox(height: 20),
                                   if (_selectedUserType == 'elder')
                                     Container(
                                       width: double.infinity,
@@ -542,12 +558,26 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                       ),
                                     ),
                                   const SizedBox(height: 40),
+                                  // Sign Up Button
                                   SizedBox(
                                     width: 60,
                                     height: 60,
                                     child: ElevatedButton(
                                       onPressed: () {
                                         if (_formKey.currentState!.validate()) {
+                                          // Additional validation for elder user type
+                                          if (_selectedUserType == 'elder' && 
+                                              _selectedHobbies.isEmpty && 
+                                              _selectedFavorites.isEmpty) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Please select at least one hobby and favorite'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                            return;
+                                          }
+
                                           // Handle sign up logic
                                           final userData = {
                                             'name': _nameController.text,
@@ -565,7 +595,19 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                                 ? _selectedFavorites.toList() 
                                                 : null,
                                           };
-                                          // Process the userData
+                                          
+                                          // Show success message
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Sign up successful!'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                          
+                                          // Navigate to login page
+                                          Navigator.of(context).pushReplacement(
+                                            MaterialPageRoute(builder: (context) => const LoginPage()),
+                                          );
                                         }
                                       },
                                       style: ElevatedButton.styleFrom(
@@ -583,21 +625,38 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  const Text(
-                                    'Or sign up with',
-                                    style: TextStyle(
-                                      color: Colors.black54,
-                                      fontSize: 14,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 20),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                     children: [
                                       ElevatedButton.icon(
-                                        onPressed: () {
-                                          // Handle Google sign in
+                                        onPressed: () async {
+                                          try {
+                                            final UserCredential? result = await _authService.signInWithGoogle();
+                                            if (result != null && result.user != null) {
+                                              setState(() {
+                                                _nameController.text = result.user!.displayName ?? '';
+                                                _emailController.text = result.user!.email ?? '';
+                                              });
+                                              
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Successfully signed in with Google'),
+                                                    backgroundColor: Colors.green,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          } catch (e) {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Error signing in with Google: $e'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          }
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.white,
@@ -614,28 +673,8 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                         ),
                                         label: const Text('Google'),
                                       ),
-                                      // ElevatedButton.icon(
-                                      //   onPressed: () {
-                                      //     // Handle Facebook sign in
-                                      //   },
-                                      //   style: ElevatedButton.styleFrom(
-                                      //     backgroundColor: Colors.white,
-                                      //     foregroundColor: const Color(0xFF1877F2),
-                                      //     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                      //     shape: RoundedRectangleBorder(
-                                      //       borderRadius: BorderRadius.circular(12),
-                                      //       side: BorderSide(color: Colors.grey.shade300),
-                                      //     ),
-                                      //   ),
-                                      //   icon: Image.asset(
-                                      //     'assest/images/facebook icon.png',
-                                      //     height: 24,
-                                      //   ),
-                                      //   label: const Text('Facebook'),
-                                      // ),
                                     ],
                                   ),
-                                  const SizedBox(height: 20),
                                 ],
                               ),
                             ),
@@ -653,3 +692,4 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
     );
   }
 }
+
