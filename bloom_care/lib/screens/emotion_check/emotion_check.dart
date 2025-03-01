@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:bloom_care/services/ml_service.dart';
 import 'package:bloom_care/services/emotion_response.dart';
+import 'package:bloom_care/screens/home/elders_home.dart';
 
 class EmotionCheck extends StatefulWidget {
   const EmotionCheck({super.key});
@@ -380,7 +381,11 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
                 alignment: Alignment.centerLeft,
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                  Navigator.of(context).pushReplacement(
+                     MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
+                  );
+                },
                 ),
               ),
             ),

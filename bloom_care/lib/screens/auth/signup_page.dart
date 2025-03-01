@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bloom_care/screens/auth/auth_service.dart';
 import 'package:bloom_care/screens/auth/login_screen.dart';
 
@@ -14,13 +15,12 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
   
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _dateController = TextEditingController();
-
-  // Add this to your _SignUpPageState class
   String? _selectedUserType;
   final _familyMemberController = TextEditingController();
   final Set<String> _selectedHobbies = {};
@@ -37,6 +37,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
   ];
 
   final AuthService _authService = AuthService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -65,8 +66,168 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
     _passwordController.dispose();
     _dateController.dispose();
     _familyMemberController.dispose();
-    // ... rest of your dispose code
     super.dispose();
+  }
+
+  Future<void> _saveUserDataToFirestore(String userId, Map<String, dynamic> userData) async {
+    try {
+      await _firestore.collection('users').doc(userId).set(userData);
+    } catch (e) {
+      print('Error saving user data: $e');
+      throw e;
+    }
+  }
+
+  Future<void> _handleSignUp() async {
+    if (_formKey.currentState!.validate()) {
+      if (_selectedUserType == 'elder' && 
+          _selectedHobbies.isEmpty && 
+          _selectedFavorites.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select at least one hobby and favorite'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final UserCredential userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+            );
+        
+        final String userId = userCredential.user!.uid;
+        
+        final userData = {
+          'name': _nameController.text,
+          'email': _emailController.text,
+          'dateOfBirth': _dateController.text,
+          'userType': _selectedUserType,
+          'familyMemberType': _selectedUserType == 'family_member' 
+              ? _familyMemberController.text 
+              : null,
+          'hobbies': _selectedUserType == 'elder' 
+              ? _selectedHobbies.toList() 
+              : null,
+          'favorites': _selectedUserType == 'elder' 
+              ? _selectedFavorites.toList() 
+              : null,
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+        
+        await _saveUserDataToFirestore(userId, userData);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sign up successful! Please login to continue.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // Navigate to login page
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = 'An error occurred during sign up';
+        
+        if (e.code == 'weak-password') {
+          errorMessage = 'The password provided is too weak';
+        } else if (e.code == 'email-already-in-use') {
+          errorMessage = 'An account already exists for that email';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Invalid email address';
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final UserCredential? result = await _authService.signInWithGoogle();
+      if (result != null && result.user != null) {
+        final User user = result.user!;
+        
+        final DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+        
+        if (!userDoc.exists) {
+          final userData = {
+            'name': user.displayName ?? '',
+            'email': user.email ?? '',
+            'userType': _selectedUserType ?? 'caregiver',
+            'createdAt': FieldValue.serverTimestamp(),
+          };
+          
+          await _saveUserDataToFirestore(user.uid, userData);
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Successfully signed up with Google! Please login to continue.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // Navigate to login page
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error signing in with Google: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -134,7 +295,6 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // Background Image
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -143,11 +303,9 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
               ),
             ),
           ),
-          // Overlay
           Container(
             color: const Color(0xFF6B84DC).withOpacity(0.7),
           ),
-          // Content
           SafeArea(
             child: SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -163,7 +321,6 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Sign Up Text
                           const Text(
                             'Sign Up',
                             style: TextStyle(
@@ -174,7 +331,6 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                             ),
                           ),
                           const SizedBox(height: 8),
-                          // Already registered text
                           Row(
                             children: [
                               const Text(
@@ -206,7 +362,6 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                         ],
                       ),
                     ),
-                    // White Container with Form
                     Container(
                       width: double.infinity,
                       decoration: const BoxDecoration(
@@ -219,9 +374,8 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                       child: Column(
                         children: [
                           const SizedBox(height: 30),
-                          // Illustration
                           Image.asset(
-                            'assest/images/signup.png', // Add your illustration here
+                            'assest/images/signup.png',
                             height: 200,
                             fit: BoxFit.contain,
                           ),
@@ -232,36 +386,15 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                               key: _formKey,
                               child: Column(
                                 children: [
-                                  // Name Field
                                   TextFormField(
                                     controller: _nameController,
-                                    keyboardType: TextInputType.name,
-                                    textInputAction: TextInputAction.next,
-                                    style: const TextStyle(color: Colors.black87),
+                                    enabled: !_isLoading,
                                     decoration: InputDecoration(
                                       labelText: 'Name',
-                                      labelStyle: const TextStyle(color: Colors.black87),
-                                      prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF6B84DC)),
-                                      hintText: 'Enter your name',
-                                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                                      enabledBorder: OutlineInputBorder(
+                                      prefixIcon: const Icon(Icons.person_outline),
+                                      border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: Colors.grey.shade300),
                                       ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Color(0xFF6B84DC)),
-                                      ),
-                                      errorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      focusedErrorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey.shade50,
                                     ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
@@ -271,36 +404,16 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
-                                  // Email Field
                                   TextFormField(
                                     controller: _emailController,
+                                    enabled: !_isLoading,
                                     keyboardType: TextInputType.emailAddress,
-                                    textInputAction: TextInputAction.next,
-                                    style: const TextStyle(color: Colors.black87),
                                     decoration: InputDecoration(
                                       labelText: 'Email',
-                                      labelStyle: const TextStyle(color: Colors.black87),
-                                      prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF6B84DC)),
-                                      hintText: 'Enter your email',
-                                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                                      enabledBorder: OutlineInputBorder(
+                                      prefixIcon: const Icon(Icons.email_outlined),
+                                      border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: Colors.grey.shade300),
                                       ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Color(0xFF6B84DC)),
-                                      ),
-                                      errorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      focusedErrorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey.shade50,
                                     ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
@@ -313,37 +426,16 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
-                                  // Password Field
                                   TextFormField(
                                     controller: _passwordController,
+                                    enabled: !_isLoading,
                                     obscureText: true,
-                                    keyboardType: TextInputType.visiblePassword,
-                                    textInputAction: TextInputAction.done,
-                                    style: const TextStyle(color: Colors.black87),
                                     decoration: InputDecoration(
                                       labelText: 'Password',
-                                      labelStyle: const TextStyle(color: Colors.black87),
-                                      prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF6B84DC)),
-                                      hintText: 'Enter your password',
-                                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                                      enabledBorder: OutlineInputBorder(
+                                      prefixIcon: const Icon(Icons.lock_outline),
+                                      border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: Colors.grey.shade300),
                                       ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Color(0xFF6B84DC)),
-                                      ),
-                                      errorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      focusedErrorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey.shade50,
                                     ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
@@ -356,37 +448,18 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
-                                  // Date of Birth Field
                                   TextFormField(
                                     controller: _dateController,
+                                    enabled: !_isLoading,
                                     readOnly: true,
-                                    style: const TextStyle(color: Colors.black87),
+                                    onTap: () => _selectDate(context),
                                     decoration: InputDecoration(
                                       labelText: 'Date of Birth',
-                                      labelStyle: const TextStyle(color: Colors.black87),
-                                      prefixIcon: const Icon(Icons.calendar_today_outlined, color: Color(0xFF6B84DC)),
-                                      hintText: 'Select your date of birth',
-                                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                                      enabledBorder: OutlineInputBorder(
+                                      prefixIcon: const Icon(Icons.calendar_today_outlined),
+                                      border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: Colors.grey.shade300),
                                       ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Color(0xFF6B84DC)),
-                                      ),
-                                      errorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      focusedErrorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey.shade50,
                                     ),
-                                    onTap: () => _selectDate(context),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return 'Please select your date of birth';
@@ -395,31 +468,14 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                     },
                                   ),
                                   const SizedBox(height: 20),
-                                  // User Type Dropdown
                                   DropdownButtonFormField<String>(
                                     value: _selectedUserType,
                                     decoration: InputDecoration(
                                       labelText: 'User Type',
-                                      labelStyle: const TextStyle(color: Colors.black87),
-                                      prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF6B84DC)),
-                                      enabledBorder: OutlineInputBorder(
+                                      prefixIcon: const Icon(Icons.person_outline),
+                                      border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: Colors.grey.shade300),
                                       ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Color(0xFF6B84DC)),
-                                      ),
-                                      errorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      focusedErrorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(color: Colors.redAccent),
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey.shade50,
                                     ),
                                     items: const [
                                       DropdownMenuItem(
@@ -435,7 +491,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                         child: Text('Family Member'),
                                       ),
                                     ],
-                                    onChanged: (value) {
+                                    onChanged: _isLoading ? null : (value) {
                                       setState(() {
                                         _selectedUserType = value;
                                       });
@@ -447,64 +503,33 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                       return null;
                                     },
                                   ),
-                                  const SizedBox(height: 20),
-
-                                  // Conditional Family Member Field
-                                  if (_selectedUserType == 'family_member')
+                                  if (_selectedUserType == 'family_member') ...[
+                                    const SizedBox(height: 20),
                                     TextFormField(
                                       controller: _familyMemberController,
-                                      keyboardType: TextInputType.text,
-                                      textInputAction: TextInputAction.done,
-                                      style: const TextStyle(color: Colors.black87),
+                                      enabled: !_isLoading,
                                       decoration: InputDecoration(
-                                        labelText: 'Specify Family Member Type',
-                                        labelStyle: const TextStyle(color: Colors.black87),
-                                        prefixIcon: const Icon(Icons.family_restroom, color: Color(0xFF6B84DC)),
-                                        hintText: 'e.g., Son, Daughter, Spouse',
-                                        hintStyle: TextStyle(color: Colors.grey.shade400),
-                                        enabledBorder: OutlineInputBorder(
+                                        labelText: 'Relationship to Elder',
+                                        prefixIcon: const Icon(Icons.family_restroom),
+                                        border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(12),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
                                         ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: const BorderSide(color: Color(0xFF6B84DC)),
-                                        ),
-                                        errorBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: const BorderSide(color: Colors.redAccent),
-                                        ),
-                                        focusedErrorBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: const BorderSide(color: Colors.redAccent),
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.grey.shade50,
                                       ),
                                       validator: (value) {
-                                        if (_selectedUserType == 'family_member' && (value == null || value.isEmpty)) {
+                                        if (value == null || value.isEmpty) {
                                           return 'Please specify your relationship';
                                         }
                                         return null;
                                       },
                                     ),
-                                  const SizedBox(height: 20),
-                                  if (_selectedUserType == 'elder')
+                                  ],
+                                  if (_selectedUserType == 'elder') ...[
+                                    const SizedBox(height: 20),
                                     Container(
-                                      width: double.infinity,
-                                      margin: const EdgeInsets.only(bottom: 20),
                                       padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        border: Border.all(color: Colors.grey.shade300),
                                         borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.grey.withOpacity(0.1),
-                                            spreadRadius: 1,
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
                                       ),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,154 +539,128 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.black87,
                                             ),
                                           ),
                                           const SizedBox(height: 12),
                                           Wrap(
-                                            children: _hobbies.map((hobby) => _buildSelectionButton(
-                                              hobby,
-                                              _selectedHobbies.contains(hobby),
-                                              () => setState(() {
-                                                if (_selectedHobbies.contains(hobby)) {
-                                                  _selectedHobbies.remove(hobby);
-                                                } else {
-                                                  _selectedHobbies.add(hobby);
-                                                }
-                                              }),
-                                            )).toList(),
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: _hobbies.map((hobby) {
+                                              return _buildSelectionButton(
+                                                hobby,
+                                                _selectedHobbies.contains(hobby),
+                                                () {
+                                                  if (!_isLoading) {
+                                                    setState(() {
+                                                      if (_selectedHobbies.contains(hobby)) {
+                                                        _selectedHobbies.remove(hobby);
+                                                      } else {
+                                                        _selectedHobbies.add(hobby);
+                                                      }
+                                                    });
+                                                  }
+                                                },
+                                              );
+                                            }).toList(),
                                           ),
-                                          const SizedBox(height: 20),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: Colors.grey.shade300),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
                                           const Text(
                                             'Select Your Favorites',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.black87,
                                             ),
                                           ),
                                           const SizedBox(height: 12),
                                           Wrap(
-                                            children: _favorites.map((favorite) => _buildSelectionButton(
-                                              favorite,
-                                              _selectedFavorites.contains(favorite),
-                                              () => setState(() {
-                                                if (_selectedFavorites.contains(favorite)) {
-                                                  _selectedFavorites.remove(favorite);
-                                                } else {
-                                                  _selectedFavorites.add(favorite);
-                                                }
-                                              }),
-                                            )).toList(),
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: _favorites.map((favorite) {
+                                              return _buildSelectionButton(
+                                                favorite,
+                                                _selectedFavorites.contains(favorite),
+                                                () {
+                                                  if (!_isLoading) {
+                                                    setState(() {
+                                                      if (_selectedFavorites.contains(favorite)) {
+                                                        _selectedFavorites.remove(favorite);
+                                                      } else {
+                                                        _selectedFavorites.add(favorite);
+                                                      }
+                                                    });
+                                                  }
+                                                },
+                                              );
+                                            }).toList(),
                                           ),
                                         ],
                                       ),
                                     ),
+                                  ],
                                   const SizedBox(height: 40),
-                                  // Sign Up Button
                                   SizedBox(
-                                    width: 60,
-                                    height: 60,
+                                    width: double.infinity,
+                                    height: 50,
                                     child: ElevatedButton(
-                                      onPressed: () {
-                                        if (_formKey.currentState!.validate()) {
-                                          // Additional validation for elder user type
-                                          if (_selectedUserType == 'elder' && 
-                                              _selectedHobbies.isEmpty && 
-                                              _selectedFavorites.isEmpty) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Please select at least one hobby and favorite'),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          // Handle sign up logic
-                                          final userData = {
-                                            'name': _nameController.text,
-                                            'email': _emailController.text,
-                                            'password': _passwordController.text,
-                                            'dateOfBirth': _dateController.text,
-                                            'userType': _selectedUserType,
-                                            'familyMemberType': _selectedUserType == 'family_member' 
-                                                ? _familyMemberController.text 
-                                                : null,
-                                            'hobbies': _selectedUserType == 'elder' 
-                                                ? _selectedHobbies.toList() 
-                                                : null,
-                                            'favorites': _selectedUserType == 'elder' 
-                                                ? _selectedFavorites.toList() 
-                                                : null,
-                                          };
-                                          
-                                          // Show success message
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Sign up successful!'),
-                                              backgroundColor: Colors.green,
-                                            ),
-                                          );
-                                          
-                                          // Navigate to login page
-                                          Navigator.of(context).pushReplacement(
-                                            MaterialPageRoute(builder: (context) => const LoginPage()),
-                                          );
-                                        }
-                                      },
+                                      onPressed: _isLoading ? null : _handleSignUp,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(0xFF6B84DC),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(30),
+                                          borderRadius: BorderRadius.circular(12),
                                         ),
-                                        padding: EdgeInsets.zero,
                                       ),
-                                      child: const Icon(
-                                        Icons.arrow_forward,
-                                        color: Colors.white,
-                                        size: 30,
-                                      ),
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              ),
+                                            )
+                                          : const Text(
+                                              'Sign Up',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                     ),
                                   ),
                                   const SizedBox(height: 20),
+                                  const Text(
+                                    'Or sign up with',
+                                    style: TextStyle(
+                                      color: Colors.black54,
+                                      fontSize: 14,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 20),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       ElevatedButton.icon(
-                                        onPressed: () async {
-                                          try {
-                                            final UserCredential? result = await _authService.signInWithGoogle();
-                                            if (result != null && result.user != null) {
-                                              setState(() {
-                                                _nameController.text = result.user!.displayName ?? '';
-                                                _emailController.text = result.user!.email ?? '';
-                                              });
-                                              
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Successfully signed in with Google'),
-                                                    backgroundColor: Colors.green,
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Error signing in with Google: $e'),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
-                                          }
-                                        },
+                                        onPressed: _isLoading ? null : _handleGoogleSignIn,
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.white,
                                           foregroundColor: Colors.black87,
-                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 24,
+                                            vertical: 12,
+                                          ),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(12),
                                             side: BorderSide(color: Colors.grey.shade300),

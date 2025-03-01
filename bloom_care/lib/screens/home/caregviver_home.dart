@@ -1,285 +1,250 @@
 import 'package:flutter/material.dart';
-import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
 
-class BloomCareHomePage extends StatefulWidget {
-  const BloomCareHomePage({super.key});
+class CaregiverHomePage extends StatefulWidget {
+  const CaregiverHomePage({super.key});
 
   @override
-  State<BloomCareHomePage> createState() => _BloomCareHomePageState();
+  State<CaregiverHomePage> createState() => _CaregiverHomePageState();
 }
 
-class _BloomCareHomePageState extends State<BloomCareHomePage> {
-  String? selectedMood;
+class _CaregiverHomePageState extends State<CaregiverHomePage> {
+  int _selectedIndex = 0;
+  
+  // Sample data for elders
+  final List<Map<String, dynamic>> _elders = [
+    {
+      'name': 'Imsarie Williams',
+      'age': 78,
+      'mood': 'Tired',
+      'emergency': false,
+    },
+    {
+      'name': 'Robert Johnson',
+      'age': 82,
+      'mood': 'Happy',
+      'emergency': false,
+    },
+    {
+      'name': 'Eleanor Smith',
+      'age': 75,
+      'mood': 'Anxious',
+      'emergency': true,
+    },
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFD7E0FA), // Light blue background
       appBar: AppBar(
-        backgroundColor: Color(0xFF8FA2E6), // App bar color
-        title: Column(
+        backgroundColor: const Color(0xFFB0C4FF),
+        elevation: 0,
+        title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text(
               'Hello, Welcome',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             Text(
-              'Imsarie Williams',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+              'Caregiver Dashboard',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black54,
+              ),
             ),
           ],
         ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () {},
+        ),
+        actions: [
+          CircleAvatar(
+            backgroundColor: Colors.grey[300],
+            child: const Icon(Icons.person, color: Colors.black54),
+          ),
+          const SizedBox(width: 16),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Mood Section
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Color(0xFFB3C1F0),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.lightBlueAccent.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'How is your mood today?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildMoodButton('Happy', '😊'),
-                      _buildMoodButton('Relaxed', '😌'),
-                      _buildMoodButton('Tired', '😫'),
-                      _buildMoodButton('Stressed', '😰'),
-                      _buildMoodButton('Anxious', '😨'),
-                      _buildMoodButton('Lonely', '🥺'),
-                    ],
-                  ),
-                  if (selectedMood != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      'Selected mood: $selectedMood',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Quick Actions Grid
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 1.5,
-              children: [
-                _buildActionCard('Activity', Icons.directions_run, Colors.lightBlue),
-                _buildActionCard('Medicine', Icons.medical_services, Colors.lightGreen),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // AI Assistant Button as a Bar
-            _buildAIAssistantBar(),
-
-            const SizedBox(height: 24),
-
-            // Your Profile Section (Centered)
-            Container(
-              padding: const EdgeInsets.all(16),
-              width: double.infinity, // Centering the container
-              decoration: BoxDecoration(
-                color: Color(0xFFB3C1F0),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center, // Center text inside
-                children: [
-                  const Text(
-                    'Your Name',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center, // Center text
-                  ),
-                  const SizedBox(height: 17),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'About You',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Imsarie williams • 68 years',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Assigned Caregiver',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Dr. Michael Chen',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: const BottomNav(currentIndex: 0),
-    );
-  }
-
-  Widget _buildMoodButton(String mood, String emoji) {
-    final isSelected = selectedMood == mood;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          selectedMood = mood;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.lightBlue[100] : Colors.lightBlue[600],
-          border: isSelected
-              ? Border.all(color: Colors.lightBlue[700]!, width: 2)
-              : null,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              mood,
-              style: TextStyle(
-                color: isSelected ? Colors.lightBlue[700] : Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(emoji, style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionCard(String title, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () {
-          if (title == 'Activity') {
-            Navigator.pushNamed(context, '/activity');
-          }
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: const TextStyle(
+              const Text(
+                'Your Assigned Elders',
+                style: TextStyle(
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
                 ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Elder profile cards
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _elders.length,
+                itemBuilder: (context, index) {
+                  final elder = _elders[index];
+                  return ElderProfileCard(
+                    elder: elder,
+                  );
+                },
               ),
             ],
           ),
         ),
       ),
+      bottomNavigationBar: CaregiverNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
     );
   }
+}
 
-  Widget _buildAIAssistantBar() {
-    return InkWell(
-      onTap: () {
-        // Add AI assistant navigation
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Color(0xFF6B84DC),
-          borderRadius: BorderRadius.circular(12),
-        ),
+class ElderProfileCard extends StatelessWidget {
+  final Map<String, dynamic> elder;
+
+  const ElderProfileCard({
+    super.key,
+    required this.elder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: elder['emergency'] ? Colors.red.shade100 : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.person, color: Colors.white, size: 28),
-            SizedBox(width: 10),
-            Text(
-              'virtual companion',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+          children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: Colors.grey[200],
+              child: Text(
+                elder['name'].substring(0, 1),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
               ),
             ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    elder['name'],
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${elder['age']} years',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        'Current mood: ',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      Text(
+                        elder['mood'],
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: _getMoodColor(elder['mood']),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (elder['emergency'])
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.warning,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'Alert',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Color _getMoodColor(String mood) {
+    switch (mood.toLowerCase()) {
+      case 'happy':
+        return Colors.green;
+      case 'relaxed':
+        return Colors.blue;
+      case 'tired':
+        return Colors.orange;
+      case 'stressed':
+      case 'anxious':
+        return Colors.red;
+      case 'lonely':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
   }
 }

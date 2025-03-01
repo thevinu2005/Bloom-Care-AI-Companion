@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:bloom_care/screens/emotion_check/emotion_check.dart';
 
 class BloomCareHomePage extends StatefulWidget {
   const BloomCareHomePage({super.key});
@@ -125,9 +126,15 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center, // Center text inside
-                children: [
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).pushReplacement(
+                     MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
+                  );
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center, // Center text inside
+                  children: [
                   const Text(
                     'Your Name',
                     style: TextStyle(
@@ -178,7 +185,8 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                 ],
               ),
             ),
-          ],
+          ),
+        ],
         ),
       ),
       bottomNavigationBar: const BottomNav(currentIndex: 0),
@@ -255,7 +263,9 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
   Widget _buildAIAssistantBar() {
     return InkWell(
       onTap: () {
-        // Add AI assistant navigation
+        Navigator.of(context).pushReplacement(
+           MaterialPageRoute(builder: (context) => const EmotionCheck()),
+         );
       },
       child: Container(
         width: double.infinity,
