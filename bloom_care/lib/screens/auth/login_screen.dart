@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bloom_care/screens/auth/signup_page.dart';
 import 'package:bloom_care/screens/home/elders_home.dart';
+import 'package:bloom_care/screens/auth/forgot password.dart';
 
 
 class LoginPage extends StatefulWidget {
@@ -233,9 +234,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     alignment: Alignment.centerRight,
                                     child: TextButton(
                                       onPressed: () {
-                                        //   Navigator.of(context).push(
-                                        //   MaterialPageRoute(builder: (context) => const SignUpPage()),
-                                        // );
+                                          Navigator.of(context).push(
+                                          MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                                        );
                                       },
                                       child: const Text(
                                         'Forgot Password?',
