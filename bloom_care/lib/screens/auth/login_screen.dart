@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:bloom_care/screens/auth/signup_page.dart';
-import 'package:bloom_care/screens/home/elders_home.dart';
 import 'package:bloom_care/screens/auth/forgot password.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:bloom_care/screens/home/caregviver_home.dart';
+import 'package:bloom_care/screens/home/elders_home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -15,9 +18,12 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   @override
   void initState() {
@@ -44,6 +50,160 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  // Handle email/password sign in
+  Future<void> _handleSignIn() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+
+        if (userCredential.user != null) {
+          // Get user data from Firestore
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .get();
+
+          if (userDoc.exists) {
+            final userType = userDoc.data()?['userType'] as String?;
+            
+            if (mounted) {
+              if (userType == 'caregiver' || userType == 'family_member') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const CaregiverHomePage()),
+                );
+              } else if (userType == 'elder') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
+                );
+              } else {
+                // Handle unknown user type
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Error: Invalid user type'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          }
+        }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = 'An error occurred';
+        
+        if (e.code == 'user-not-found') {
+          errorMessage = 'No user found with this email';
+        } else if (e.code == 'wrong-password') {
+          errorMessage = 'Wrong password provided';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Invalid email address';
+        } else if (e.code == 'user-disabled') {
+          errorMessage = 'This account has been disabled';
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+
+  // Handle Google sign in
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        throw Exception('Google sign in aborted');
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential = 
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      if (userCredential.user != null) {
+        // Get user data from Firestore
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .get();
+
+        if (userDoc.exists) {
+          final userType = userDoc.data()?['userType'] as String?;
+          
+          if (mounted) {
+            if (userType == 'caregiver' || userType == 'family_member') {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const CaregiverHomePage()),
+              );
+            } else if (userType == 'elder') {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
+              );
+            } else {
+              // Handle unknown user type
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Error: Invalid user type'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error signing in with Google: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -103,7 +263,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               ),
                               GestureDetector(
                                 onTap: () {
-                                  // Navigate to sign in page
                                   Navigator.of(context).push(
                                     MaterialPageRoute(builder: (context) => const SignUpPage()),
                                   );
@@ -152,6 +311,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     controller: _emailController,
                                     keyboardType: TextInputType.emailAddress,
                                     textInputAction: TextInputAction.next,
+                                    enabled: !_isLoading,
                                     style: const TextStyle(color: Colors.black87),
                                     decoration: InputDecoration(
                                       labelText: 'Email',
@@ -194,6 +354,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     obscureText: true,
                                     keyboardType: TextInputType.visiblePassword,
                                     textInputAction: TextInputAction.done,
+                                    enabled: !_isLoading,
                                     style: const TextStyle(color: Colors.black87),
                                     decoration: InputDecoration(
                                       labelText: 'Password',
@@ -233,8 +394,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: TextButton(
-                                      onPressed: () {
-                                          Navigator.of(context).push(
+                                      onPressed: _isLoading ? null : () {
+                                        Navigator.of(context).push(
                                           MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
                                         );
                                       },
@@ -252,26 +413,29 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     width: double.infinity,
                                     height: 50,
                                     child: ElevatedButton(
-                                      onPressed: () {
-                                        if (_formKey.currentState!.validate()) {
-                                          Navigator.of(context).pushReplacement(
-                                            MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
-                                          );
-                                        }
-                                      },
+                                      onPressed: _isLoading ? null : _handleSignIn,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(0xFF6B84DC),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                       ),
-                                      child: const Text(
-                                        'Login',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              ),
+                                            )
+                                          : const Text(
+                                              'Login',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                     ),
                                   ),
                                   const SizedBox(height: 20),
@@ -288,9 +452,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                     children: [
                                       ElevatedButton.icon(
-                                        onPressed: () {
-                                          // Handle Google sign in
-                                        },
+                                        onPressed: _isLoading ? null : _handleGoogleSignIn,
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.white,
                                           foregroundColor: Colors.black87,
@@ -300,10 +462,19 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                             side: BorderSide(color: Colors.grey.shade300),
                                           ),
                                         ),
-                                        icon: Image.asset(
-                                          'assest/images/google icon.png',
-                                          height: 24,
-                                        ),
+                                        icon: _isLoading
+                                            ? const SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6B84DC)),
+                                                ),
+                                              )
+                                            : Image.asset(
+                                                'assest/images/google icon.png',
+                                                height: 24,
+                                              ),
                                         label: const Text('Google'),
                                       ),
                                     ],
@@ -325,3 +496,4 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 }
+

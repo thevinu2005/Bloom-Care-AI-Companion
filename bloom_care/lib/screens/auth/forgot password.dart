@@ -115,7 +115,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/background_for_welcome.jpg'),
+                image: AssetImage('assest/images/background_for_welcome.jpg'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -185,7 +185,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
                               return Image.asset(
-                                'assets/images/signup.png',
+                                'assest/images/signup.png',
                                 height: 200,
                                 fit: BoxFit.contain,
                               );
