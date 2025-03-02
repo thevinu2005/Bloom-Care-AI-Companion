@@ -104,3 +104,100 @@ class _HobbiesPageState extends State<HobbiesPage> {
       ),
     );
   }
+
+  // Show add hobby dialog
+  void _showAddHobbyDialog() {
+    final nameController = TextEditingController();
+    final frequencyController = TextEditingController();
+    String selectedCategory = 'Indoor';
+    String selectedMood = 'Relaxed';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text(
+                'Add New Hobby',
+                style: TextStyle(
+                  color: Color(0xFF4A5578),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Hobby Name',
+                        border: OutlineInputBorder(),
+                        labelStyle: TextStyle(color: Color(0xFF6B84DC)),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF6B84DC)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: frequencyController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Weekly Frequency',
+                        border: OutlineInputBorder(),
+                        labelStyle: TextStyle(color: Color(0xFF6B84DC)),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF6B84DC)),
+                        ),
+                        hintText: 'How many times per week?',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Category:',
+                      style: TextStyle(
+                        color: Color(0xFF6B84DC),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: selectedCategory,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onChanged: (String? newValue) {
+                        setDialogState(() {
+                          selectedCategory = newValue!;
+                        });
+                      },
+                      items: <String>['Indoor', 'Outdoor', 'Creative']
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Mood Effect:',
+                      style: TextStyle(
+                        color: Color(0xFF6B84DC),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: selectedMood,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onChanged: (String? newValue) {
+                        setDialogState(() {
+                          selectedMood = newValue!;
+                        });
+                      },
