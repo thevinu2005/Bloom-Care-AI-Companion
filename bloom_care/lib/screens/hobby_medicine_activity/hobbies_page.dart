@@ -406,3 +406,113 @@ class _HobbiesPageState extends State<HobbiesPage> {
               ),
             ),
           ),
+
+          // Hobbies List
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Empty state when no hobbies match the filter
+                  if (filteredHobbies.isEmpty)
+                    Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.hiking,
+                              size: 64,
+                              color: const Color(0xFF8FA2E6).withOpacity(0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No ${activeTab == 'all' ? '' : activeTab} hobbies yet',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF4A5578).withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Add a new hobby to get started',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filteredHobbies.length,
+                        itemBuilder: (context, index) {
+                          final hobby = filteredHobbies[index];
+                          return _buildHobbyCard(hobby);
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add New Hobby'),
+                      onPressed: _showAddHobbyDialog,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF8FA2E6),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: const BottomNav(currentIndex: -1),
+    );
+  }
+
+  Widget _buildCategoryTab(String tabId, String label) {
+    final isActive = activeTab == tabId;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          activeTab = tabId;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF8FA2E6) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            color: isActive ? Colors.white : const Color(0xFF6B84DC),
+          ),
+        ),
+      ),
+    );
+  }
