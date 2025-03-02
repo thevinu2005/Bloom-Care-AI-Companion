@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:bloom_care/screens/emotion_check/emotion_check.dart';
 
@@ -11,24 +13,84 @@ class BloomCareHomePage extends StatefulWidget {
 
 class _BloomCareHomePageState extends State<BloomCareHomePage> {
   String? selectedMood;
+  String? userName;
+  String? userAge;
+  String? caregiverName;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userData.exists) {
+          setState(() {
+            userName = userData.data()?['name'] ?? 'User';
+            // Calculate age from dateOfBirth if it exists
+            final dateOfBirth = userData.data()?['dateOfBirth'] as String?;
+            if (dateOfBirth != null) {
+              final parts = dateOfBirth.split('/');
+              if (parts.length == 3) {
+                final birthDate = DateTime(
+                  int.parse(parts[2]), // year
+                  int.parse(parts[1]), // month
+                  int.parse(parts[0]), // day
+                );
+                final age = DateTime.now().difference(birthDate).inDays ~/ 365;
+                userAge = '$age years';
+              }
+            }
+            caregiverName = userData.data()?['caregiverName'] ?? 'Not Assigned';
+            isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        isLoading = false;
+        userName = 'User';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFD7E0FA), // Light blue background
+      backgroundColor: Color(0xFFD7E0FA),
       appBar: AppBar(
-        backgroundColor: Color(0xFF8FA2E6), // App bar color
+        backgroundColor: Color(0xFF8FA2E6),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
+          children: [
+            const Text(
               'Hello, Welcome',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
             ),
-            Text(
-              'Imsarie Williams',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-            ),
+            if (isLoading)
+              const SizedBox(
+                height: 16,
+                width: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            else
+              Text(
+                userName ?? 'User',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+              ),
           ],
         ),
       ),
@@ -37,7 +99,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Mood Section
+            // Previous mood section code remains the same
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -106,15 +168,15 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
 
             const SizedBox(height: 24),
 
-            // AI Assistant Button as a Bar
+            // AI Assistant Button
             _buildAIAssistantBar(),
 
             const SizedBox(height: 24),
 
-            // Your Profile Section (Centered)
+            // Updated Profile Section
             Container(
               padding: const EdgeInsets.all(16),
-              width: double.infinity, // Centering the container
+              width: double.infinity,
               decoration: BoxDecoration(
                 color: Color(0xFFB3C1F0),
                 borderRadius: BorderRadius.circular(16),
@@ -126,23 +188,20 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                   ),
                 ],
               ),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.of(context).pushReplacement(
-                     MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
-                  );
-                },
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center, // Center text inside
-                  children: [
-                  const Text(
-                    'Your Name',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (isLoading)
+                    const CircularProgressIndicator()
+                  else
+                    Text(
+                      userName ?? 'Your Name',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center, // Center text
-                  ),
                   const SizedBox(height: 17),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -163,7 +222,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Imsarie williams • 68 years',
+                          '${userName ?? 'Loading...'} • ${userAge ?? 'Age not set'}',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                         const SizedBox(height: 16),
@@ -176,7 +235,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Dr. Michael Chen',
+                          caregiverName ?? 'Not Assigned',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                       ],
@@ -185,8 +244,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                 ],
               ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
       bottomNavigationBar: const BottomNav(currentIndex: 0),
@@ -293,3 +351,4 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
     );
   }
 }
+
