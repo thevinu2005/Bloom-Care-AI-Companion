@@ -70,13 +70,18 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
   }
 
   Future<void> _saveUserDataToFirestore(String userId, Map<String, dynamic> userData) async {
-    try {
-      await _firestore.collection('users').doc(userId).set(userData);
-    } catch (e) {
-      print('Error saving user data: $e');
-      throw e;
-    }
+  try {
+    print('Attempting to save user data for user ID: $userId');
+    print('User data: $userData');
+    await _firestore.collection('user').doc(userId).set(userData);
+    print('User data successfully saved to Firestore');
+  } catch (e) {
+    print('Error saving user data: $e');
+    // Print stack trace for more detailed error information
+    print(StackTrace.current);
+    throw e;
   }
+}
 
   Future<void> _handleSignUp() async {
     if (_formKey.currentState!.validate()) {
@@ -185,7 +190,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
       if (result != null && result.user != null) {
         final User user = result.user!;
         
-        final DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+        final DocumentSnapshot userDoc = await _firestore.collection('user').doc(user.uid).get();
         
         if (!userDoc.exists) {
           final userData = {
