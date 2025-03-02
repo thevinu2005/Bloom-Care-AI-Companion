@@ -10,6 +10,7 @@ import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:bloom_care/services/ml_service.dart';
 import 'package:bloom_care/services/emotion_response.dart';
 import 'package:bloom_care/screens/home/elders_home.dart';
+import 'package:bloom_care/widgets/emotion_resourses_widget.dart';
 
 class EmotionCheck extends StatefulWidget {
   const EmotionCheck({super.key});
@@ -246,85 +247,95 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     const Color(0xFFFFB4B4), // Coral
   ];
 
-  return Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Text(
-        'Detected Emotion: ${result.predictedEmotion.toUpperCase()}',
-        style: const TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
+  // Check if emotion is neutral
+  final isNeutralEmotion = result.predictedEmotion.toLowerCase() == 'neutral';
+
+  return SingleChildScrollView(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Detected Emotion: ${result.predictedEmotion.toUpperCase()}',
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
-      ),
-      const SizedBox(height: 20),
-      SizedBox(
-        height: 300,
-        child: Stack(
-          children: [
-            PieChart(
-              PieChartData(
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
-                sections: List.generate(
-                  sortedEmotions.length,
-                  (index) {
-                    final emotion = sortedEmotions[index];
-                    return PieChartSectionData(
-                      color: colors[index % colors.length],
-                      value: emotion.value,
-                      title: '${(emotion.value * 100).toInt()}%',
-                      radius: 100,
-                      titleStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    );
-                  },
+        const SizedBox(height: 20),
+        SizedBox(
+          height: 300,
+          child: Stack(
+            children: [
+              PieChart(
+                PieChartData(
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 40,
+                  sections: List.generate(
+                    sortedEmotions.length,
+                    (index) {
+                      final emotion = sortedEmotions[index];
+                      return PieChartSectionData(
+                        color: colors[index % colors.length],
+                        value: emotion.value,
+                        title: '${(emotion.value * 100).toInt()}%',
+                        radius: 100,
+                        titleStyle: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      const SizedBox(height: 20),
-      // Legend
-      Wrap(
-        spacing: 16,
-        runSpacing: 8,
-        alignment: WrapAlignment.center,
-        children: List.generate(
-          sortedEmotions.length,
-          (index) {
-            final emotion = sortedEmotions[index];
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: colors[index % colors.length],
-                    shape: BoxShape.circle,
+        const SizedBox(height: 20),
+        // Legend
+        Wrap(
+          spacing: 16,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: List.generate(
+            sortedEmotions.length,
+            (index) {
+              final emotion = sortedEmotions[index];
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: colors[index % colors.length],
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  emotion.key,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
+                  const SizedBox(width: 4),
+                  Text(
+                    emotion.key,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
-      ),
-    ],
+        
+        // Add emotion resources if not neutral
+        if (!isNeutralEmotion)
+          EmotionResourcesWidget(emotion: result.predictedEmotion.toLowerCase()),
+      ],
+    ),
   );
 }
+
 
   void _showErrorSnackBar(String errorMessage, String audioPath) {
     if (!mounted) return;
