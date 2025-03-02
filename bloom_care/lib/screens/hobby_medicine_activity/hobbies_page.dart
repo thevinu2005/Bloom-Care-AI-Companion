@@ -201,3 +201,111 @@ class _HobbiesPageState extends State<HobbiesPage> {
                           selectedMood = newValue!;
                         });
                       },
+                      items: <String>['Relaxed', 'Energized', 'Creative', 'Focused', 'Happy']
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // Validate input
+                    if (nameController.text.isEmpty || frequencyController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please fill in all fields'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    // Create new hobby
+                    final hobby = {
+                      'name': nameController.text,
+                      'frequency': int.tryParse(frequencyController.text) ?? 1,
+                      'lastDone': DateTime.now().toString().substring(0, 10), // Today's date
+                      'mood': selectedMood,
+                      'category': selectedCategory,
+                      'activityCount': 0,
+                    };
+
+                    // Add hobby and close dialog
+                    addNewHobby(hobby);
+                    Navigator.pop(context);
+
+                    // Show success message
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${nameController.text} added to your hobbies!'),
+                        backgroundColor: const Color(0xFF6B84DC),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8FA2E6),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Add Hobby'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Filter hobbies based on active tab
+    final filteredHobbies = activeTab == 'all'
+        ? hobbies
+        : hobbies.where((hobby) => hobby['category'].toLowerCase() == activeTab.toLowerCase()).toList();
+
+    // Get current activity score
+    final activityScore = getActivityScore();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFD7E0FA), // Light blue background
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF8FA2E6),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Hobbies & Interests',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          // Header with activity balance
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Color(0xFF8FA2E6),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
+              ),
+            ),
