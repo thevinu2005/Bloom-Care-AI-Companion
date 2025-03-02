@@ -1,4 +1,3 @@
-// lib/screens/emotion_check.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -6,6 +5,8 @@ import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import 'package:path_provider/path_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:bloom_care/services/ml_service.dart';
 import 'package:bloom_care/services/emotion_response.dart';
@@ -25,18 +26,88 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
   bool _showAvatar = true;
   bool _isRecording = false;
   bool _isAnalyzing = false;
+  bool _isLoadingUser = true;
+  String? _userName;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   
   final _audioRecorder = AudioRecorder();
   String? _recordedFilePath;
   EmotionResponse? _analysisResult;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
     super.initState();
     _setupAnimation();
     _requestPermissions();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        final userData = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userData.exists) {
+          setState(() {
+            _userName = userData.data()?['name'] ?? 'User';
+            _isLoadingUser = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        _userName = 'User';
+        _isLoadingUser = false;
+      });
+    }
+  }
+
+  Future<void> _saveEmotionData(String emotion, Map<String, double> probabilities) async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        print('Saving emotion data for user: ${user.uid}');
+        print('Emotion: $emotion');
+        print('Probabilities: $probabilities');
+        
+        await _firestore.collection('users').doc(user.uid).collection('emotions').add({
+          'emotion': emotion,
+          'probabilities': probabilities,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+        
+        print('Emotion data saved successfully for user: ${user.uid}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Emotion recorded successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        print('Error: No user logged in');
+        throw Exception('No user logged in');
+      }
+    } catch (e) {
+      print('Error saving emotion data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving emotion data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _setupAnimation() {
@@ -200,16 +271,23 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
         throw Exception(response.error ?? 'Analysis failed');
       }
 
+      // Before saving emotion data
+      print('Analysis complete, attempting to save emotion data...');
+
+      // Save emotion data to Firebase
+      if (response.result != null) {
+        await _saveEmotionData(
+          response.result!.predictedEmotion,
+          response.result!.probabilities,
+        );
+      }
+
       setState(() {
         _isAnalyzing = false;
         _showResults = true;
         _showAvatar = false;
         _analysisResult = response;
       });
-
-      // Debug print to verify response
-      print('Analysis Result: ${response.result?.predictedEmotion}');
-      print('Probabilities: ${response.result?.probabilities}');
 
     } catch (e) {
       if (!mounted) return;
@@ -227,115 +305,110 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
   }
 
   Widget _buildEmotionResults() {
-  if (_analysisResult?.result == null) {
-    return const SizedBox.shrink();
-  }
-  
-  final result = _analysisResult!.result!;
-  final sortedEmotions = result.probabilities.entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value));
+    if (_analysisResult?.result == null) {
+      return const SizedBox.shrink();
+    }
+    
+    final result = _analysisResult!.result!;
+    final sortedEmotions = result.probabilities.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
-  // Generate colors for each emotion
-  final colors = [
-    const Color(0xFF7C77B9), // Purple
-    const Color(0xFF8BBABB), // Teal
-    const Color(0xFFBE9FE1), // Lavender
-    const Color(0xFFEDB1F1), // Pink
-    const Color(0xFFFFCBC1), // Peach
-    const Color(0xFFC4D7B2), // Sage
-    const Color(0xFFA0BFE0), // Blue
-    const Color(0xFFFFB4B4), // Coral
-  ];
+    final colors = [
+      const Color(0xFF7C77B9),
+      const Color(0xFF8BBABB),
+      const Color(0xFFBE9FE1),
+      const Color(0xFFEDB1F1),
+      const Color(0xFFFFCBC1),
+      const Color(0xFFC4D7B2),
+      const Color(0xFFA0BFE0),
+      const Color(0xFFFFB4B4),
+    ];
 
-  // Check if emotion is neutral
-  final isNeutralEmotion = result.predictedEmotion.toLowerCase() == 'neutral';
+    final isNeutralEmotion = result.predictedEmotion.toLowerCase() == 'neutral';
 
-  return SingleChildScrollView(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Detected Emotion: ${result.predictedEmotion.toUpperCase()}',
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Detected Emotion: ${result.predictedEmotion.toUpperCase()}',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          height: 300,
-          child: Stack(
-            children: [
-              PieChart(
-                PieChartData(
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 40,
-                  sections: List.generate(
-                    sortedEmotions.length,
-                    (index) {
-                      final emotion = sortedEmotions[index];
-                      return PieChartSectionData(
-                        color: colors[index % colors.length],
-                        value: emotion.value,
-                        title: '${(emotion.value * 100).toInt()}%',
-                        radius: 100,
-                        titleStyle: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      );
-                    },
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 300,
+            child: Stack(
+              children: [
+                PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 40,
+                    sections: List.generate(
+                      sortedEmotions.length,
+                      (index) {
+                        final emotion = sortedEmotions[index];
+                        return PieChartSectionData(
+                          color: colors[index % colors.length],
+                          value: emotion.value,
+                          title: '${(emotion.value * 100).toInt()}%',
+                          radius: 100,
+                          titleStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        // Legend
-        Wrap(
-          spacing: 16,
-          runSpacing: 8,
-          alignment: WrapAlignment.center,
-          children: List.generate(
-            sortedEmotions.length,
-            (index) {
-              final emotion = sortedEmotions[index];
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: colors[index % colors.length],
-                      shape: BoxShape.circle,
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: List.generate(
+              sortedEmotions.length,
+              (index) {
+                final emotion = sortedEmotions[index];
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: colors[index % colors.length],
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    emotion.key,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
+                    const SizedBox(width: 4),
+                    Text(
+                      emotion.key,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
-        ),
-        
-        // Add emotion resources if not neutral
-        if (!isNeutralEmotion)
-          EmotionResourcesWidget(emotion: result.predictedEmotion.toLowerCase()),
-      ],
-    ),
-  );
-}
-
+          
+          if (!isNeutralEmotion)
+            EmotionResourcesWidget(emotion: result.predictedEmotion.toLowerCase()),
+        ],
+      ),
+    );
+  }
 
   void _showErrorSnackBar(String errorMessage, String audioPath) {
     if (!mounted) return;
@@ -393,10 +466,10 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () {
-                  Navigator.of(context).pushReplacement(
-                     MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
-                  );
-                },
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
+                    );
+                  },
                 ),
               ),
             ),
@@ -406,14 +479,17 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Hello Imsarie',
-                    style: TextStyle(
-                      fontSize: 32,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                  if (_isLoadingUser)
+                    const CircularProgressIndicator(color: Colors.white)
+                  else
+                    Text(
+                      'Hello ${_userName ?? "User"}',
+                      style: const TextStyle(
+                        fontSize: 32,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
                   if (!_showResults && !_isAnalyzing)
                     const Text(
                       'How may I assist you today?',
@@ -536,3 +612,4 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     );
   }
 }
+
