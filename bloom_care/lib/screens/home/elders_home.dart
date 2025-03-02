@@ -136,3 +136,131 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                       _buildMoodButton('Lonely', '🥺'),
                     ],
                   ),
+                  if (selectedMood != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFD7E0FA),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'You selected: $selectedMood',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF4A5578),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Quick Actions with improved layout
+            Text(
+              'Quick Actions',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF4A5578),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: _buildActionCard('Daily Activities', Icons.directions_run, Color(0xFF8FA2E6))),
+                SizedBox(width: 16),
+                Expanded(child: _buildActionCard('Daily reminders',Icons.event_note, Color(0xFF8FA2E6))),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // AI Assistant Button with improved design
+            _buildAIAssistantBar(),
+
+            const SizedBox(height: 24),
+
+            // Your Profile Section with improved layout
+            Container(
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF8FA2E6).withOpacity(0.15),
+                    spreadRadius: 0,
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.person, color: Color(0xFF6B84DC), size: 24),
+                      SizedBox(width: 10),
+                      Text(
+                        'Your Profile',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A5578),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFF5F7FD),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Color(0xFFD7E0FA)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildProfileInfoRow('Name:', 'Imsarie Williams'),
+                        Divider(height: 24, color: Color(0xFFD7E0FA)),
+                        _buildProfileInfoRow('Age:', '68 years'),
+                        Divider(height: 24, color: Color(0xFFD7E0FA)),
+                        _buildProfileInfoRow('Caregiver:', 'Dr. Michael Chen'),
+                        Divider(height: 24, color: Color(0xFFD7E0FA)),
+                        _buildProfileInfoRow('Next Appointment:', 'March 5, 2025'),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Center(
+                    child: ElevatedButton.icon(
+                      onPressed: () {},
+                      icon: Icon(Icons.edit, size: 18),
+                      label: Text('Update Profile'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF6B84DC),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: const BottomNav(currentIndex: 0),
+    );
+  }
+
