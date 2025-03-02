@@ -309,3 +309,100 @@ class _HobbiesPageState extends State<HobbiesPage> {
                 bottomRight: Radius.circular(30),
               ),
             ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Activity Balance',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF6B84DC),
+                        ),
+                      ),
+                      Text(
+                        '$activityScore/100',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF6B84DC),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: activityScore / 100,
+                      backgroundColor: const Color(0xFFD7E0FA),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6B84DC)),
+                      minHeight: 8,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECF1FD),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFD7E0FA)),
+                    ),
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(fontSize: 14, color: Color(0xFF4A5578)),
+                        children: [
+                          const TextSpan(
+                            text: 'Suggestion: ',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          TextSpan(
+                            text: 'Try doing more ',
+                          ),
+                          TextSpan(
+                            text: getRecommendation(),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const TextSpan(
+                            text: ' this week to improve your wellness balance.',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Category Tabs
+          Container(
+            margin: const EdgeInsets.only(top: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildCategoryTab('all', 'All'),
+                  _buildCategoryTab('indoor', 'Indoor'),
+                  _buildCategoryTab('outdoor', 'Outdoor'),
+                  _buildCategoryTab('creative', 'Creative'),
+                ],
+              ),
+            ),
+          ),
