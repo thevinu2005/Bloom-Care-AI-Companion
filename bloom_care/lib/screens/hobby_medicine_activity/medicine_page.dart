@@ -230,3 +230,110 @@ class _MedicinePageState extends State<MedicinePage> {
                     ),
                   ),
                   const SizedBox(height: 12),
+
+                  // Quantity
+                  TextField(
+                    controller: _quantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Quantity',
+                      labelStyle: const TextStyle(color: Color(0xFF6B84DC)),
+                      prefixIcon: const Icon(Icons.format_list_numbered, color: Color(0xFF6B84DC)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF6B84DC), width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Reminder options toggle
+                  Row(
+                    children: [
+                      const Text('Add reminder options?',
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF6B84DC),
+                            fontWeight: FontWeight.w500
+                        ),
+                      ),
+                      Switch(
+                        value: _showReminderOptions,
+                        onChanged: (value) {
+                          setState(() {
+                            _showReminderOptions = value;
+                          });
+                        },
+                        activeColor: const Color(0xFF6B84DC),
+                      ),
+                    ],
+                  ),
+
+                  // Additional options if toggle is on
+                  if (_showReminderOptions) ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _notesController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Special Instructions',
+                        labelStyle: const TextStyle(color: Color(0xFF6B84DC)),
+                        prefixIcon: const Icon(Icons.notes, color: Color(0xFF6B84DC)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF6B84DC), width: 2),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Recurring options
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Repeat',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF6B84DC),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              _buildDayChip('Mon'),
+                              _buildDayChip('Tue'),
+                              _buildDayChip('Wed'),
+                              _buildDayChip('Thu'),
+                              _buildDayChip('Fri'),
+                              _buildDayChip('Sat'),
+                              _buildDayChip('Sun'),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
