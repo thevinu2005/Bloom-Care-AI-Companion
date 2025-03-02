@@ -4,7 +4,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:bloom_care/screens/auth/signup_page.dart';
 import 'package:bloom_care/screens/auth/forgot password.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:bloom_care/screens/home/caregviver_home.dart';
+// Check these import paths are correct
+import 'package:bloom_care/screens/home/caregviver_home.dart';  // Note: possible typo in 'caregviver'
 import 'package:bloom_care/screens/home/elders_home.dart';
 
 class LoginPage extends StatefulWidget {
@@ -66,33 +67,110 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         );
 
         if (userCredential.user != null) {
-          // Get user data from Firestore
-          final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .get();
+          print('User authenticated successfully with UID: ${userCredential.user!.uid}');
+          print('Email: ${userCredential.user!.email}');
+          
+          try {
+            // First verify the user exists in Firestore
+            final userDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .get();
 
-          if (userDoc.exists) {
-            final userType = userDoc.data()?['userType'] as String?;
+            print('Attempting to fetch user document...');
+            print('Document exists: ${userDoc.exists}');
             
-            if (mounted) {
-              if (userType == 'caregiver' || userType == 'family_member') {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const CaregiverHomePage()),
-                );
-              } else if (userType == 'elder') {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
-                );
+            if (userDoc.exists) {
+              final userData = userDoc.data();
+              print('User data retrieved: $userData');
+              
+              // Verify all required fields
+              if (userData != null && userData.containsKey('userType')) {
+                final userType = userData['userType'] as String?;
+                print('User type found: $userType');
+                
+                if (mounted) {
+                  if (userType == 'caregiver' || userType == 'family_member') {
+                    print('Navigating to CaregiverHomePage');
+                    await Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => const CaregiverHomePage()),
+                    );
+                  } else if (userType == 'elder') {
+                    print('Navigating to BloomCareHomePage');
+                    await Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => const BloomCareHomePage()),
+                    );
+                  } else {
+                    print('Invalid user type detected: $userType');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Error: Invalid user type. Please contact support.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               } else {
-                // Handle unknown user type
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Error: Invalid user type'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                print('User type field missing in document');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Error: User type not found. Please complete registration.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  // Optionally navigate to complete profile setup
+                  // Navigator.of(context).pushReplacement(
+                  //   MaterialPageRoute(builder: (context) => const CompleteProfilePage()),
+                  // );
+                }
               }
+            } else {
+              print('No user document found for UID: ${userCredential.user!.uid}');
+              // Create a new user document if it doesn't exist
+              try {
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(userCredential.user!.uid)
+                    .set({
+                  'email': userCredential.user!.email,
+                  'createdAt': FieldValue.serverTimestamp(),
+                  // Add any other default fields needed
+                });
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please complete your profile setup'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  // Navigate to complete profile setup
+                  // Navigator.of(context).pushReplacement(
+                  //   MaterialPageRoute(builder: (context) => const CompleteProfilePage()),
+                  // );
+                }
+              } catch (e) {
+                print('Error creating new user document: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error creating user profile: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            }
+          } catch (e) {
+            print('Error accessing Firestore: $e');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error accessing user data: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
             }
           }
         }
