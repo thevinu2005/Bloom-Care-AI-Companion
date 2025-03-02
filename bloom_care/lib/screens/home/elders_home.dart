@@ -264,3 +264,124 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
     );
   }
 
+  Widget _buildProfileInfoRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 16,
+            color: Color(0xFF6B84DC),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            color: Color(0xFF4A5578),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMoodButton(String mood, String emoji) {
+    final isSelected = selectedMood == mood;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          selectedMood = mood;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Color(0xFFB3C1F0) : Colors.white,
+          border: Border.all(
+            color: isSelected ? Color(0xFF6B84DC) : Color(0xFFD7E0FA),
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: isSelected
+              ? [
+            BoxShadow(
+              color: Color(0xFF8FA2E6).withOpacity(0.2),
+              spreadRadius: 0,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              emoji,
+              style: const TextStyle(fontSize: 20),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              mood,
+              style: TextStyle(
+                color: isSelected ? Color(0xFF4A5578) : Color(0xFF6B84DC),
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionCard(String title, IconData icon, Color color) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () {
+          if (title == 'Daily Activities') {
+            Navigator.pushNamed(context, '/activity');
+          }
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 32, color: color),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF4A5578),
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Tap to view',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
