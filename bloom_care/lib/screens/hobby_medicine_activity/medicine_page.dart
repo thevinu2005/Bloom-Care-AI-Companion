@@ -109,3 +109,124 @@ class _MedicinePageState extends State<MedicinePage> {
                   ),
                 ],
               ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Track Your Medications',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Add your prescriptions to receive reminders',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Add Medicine Form
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'New Medication',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Medicine Name
+                  TextField(
+                    controller: _medicineNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Medicine Name',
+                      labelStyle: const TextStyle(color: Color(0xFF6B84DC)),
+                      prefixIcon: const Icon(Icons.medication, color: Color(0xFF6B84DC)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF6B84DC), width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Dosage
+                  TextField(
+                    controller: _dosageController,
+                    decoration: InputDecoration(
+                      labelText: 'Dosage (e.g. 500mg)',
+                      labelStyle: const TextStyle(color: Color(0xFF6B84DC)),
+                      prefixIcon: const Icon(Icons.local_pharmacy, color: Color(0xFF6B84DC)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF6B84DC), width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Time to Take - with time picker
+                  TextField(
+                    controller: _timeController,
+                    readOnly: true,
+                    onTap: () => _selectTime(context),
+                    decoration: InputDecoration(
+                      labelText: 'Time to Take',
+                      labelStyle: const TextStyle(color: Color(0xFF6B84DC)),
+                      prefixIcon: const Icon(Icons.access_time, color: Color(0xFF6B84DC)),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.calendar_today, color: Color(0xFF6B84DC)),
+                        onPressed: () => _selectTime(context),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF6B84DC), width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
