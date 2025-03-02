@@ -337,3 +337,109 @@ class _MedicinePageState extends State<MedicinePage> {
                       ),
                     ),
                   ],
+
+                  const SizedBox(height: 16),
+
+                  // Add Medicine Button - full width now
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _addMedicine,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6B84DC),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.add),
+                      label: const Text(
+                        'Add Medication',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Medicine List Title
+            const Text(
+              'Your Medications',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Medicine List
+            medicines.isEmpty
+                ? _emptyMedicationState()
+                : ListView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: medicines.length,
+              itemBuilder: (context, index) {
+                final medicine = medicines[index];
+                return _buildMedicineCard(medicine, index);
+              },
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: const BottomNav(currentIndex: 1),
+    );
+  }
+
+  Widget _buildDayChip(String day) {
+    bool isSelected = false; // This would be connected to a state variable in a full implementation
+
+    return ChoiceChip(
+      label: Text(day),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        // Would update state in a full implementation
+      },
+      backgroundColor: Colors.white,
+      selectedColor: const Color(0xFF8FA2E6),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : const Color(0xFF6B84DC),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+  }
+
+  Widget _emptyMedicationState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.medical_services_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No medications added yet',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
