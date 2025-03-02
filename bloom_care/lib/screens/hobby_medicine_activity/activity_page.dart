@@ -111,3 +111,129 @@ class ActivityPage extends StatelessWidget {
                 ),
               ),
             ),
+
+            // Personal Information section removed
+
+            // Activity Management Section - Made more creative
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCreativeSectionHeader('Activity Management', Icons.directions_run),
+                  const SizedBox(height: 20),
+
+                  // Main Activity Cards with more creative design
+                _buildCreativeActivityCard(
+                  context,
+                  'Hobbies & Interests',
+                  'Explore and manage your favorite activities',
+                  Icons.sports_esports,
+                  Color(0xFF8FA2E6),
+                  Color(0xFFB3C1F0),
+                      () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const HobbiesPage()),
+                    );
+                  },
+                ),
+
+                  const SizedBox(height: 16),
+
+                  _buildCreativeActivityCard(
+                    context,
+                    'Medication',
+                    'Track your medicines & schedule with reminders',
+                    Icons.medical_services,
+                    Color(0xFF6B84DC),
+                    Color(0xFFD7E0FA),
+                        () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const MedicinePage()),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _buildCreativeActivityCard(
+                    context,
+                    'Caregiver Assignment',
+                    'Connect and manage your care providers',
+                    Icons.people_alt_outlined,
+                    Color(0xFF5D77D6),
+                    Color(0xFFCBD6F9),
+                        () {},
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _buildCreativeActivityCard(
+                    context,
+                    'Daily Activities',
+                    'Set up your personalized routine schedule',
+                    Icons.event_note,
+                    Color(0xFF4A5578),
+                    Color(0xFFB3C1F0),
+                        () {},
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Need Assistance section removed
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      // Replaced the built-in BottomNavigationBar with the custom BottomNav widget
+      bottomNavigationBar: const BottomNav(currentIndex: -1), // Use -1 to indicate no selection
+    );
+  }
+
+  Widget _buildCreativeSectionHeader(String title, IconData icon) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF8FA2E6), Color(0xFF6B84DC)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFF8FA2E6).withOpacity(0.3),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+ 
