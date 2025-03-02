@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bloom_care/screens/auth/auth_service.dart';
 import 'package:bloom_care/screens/auth/login_screen.dart';
+import 'package:bloom_care/firebase_options.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({Key? key}) : super(key: key);
@@ -70,18 +71,32 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
   }
 
   Future<void> _saveUserDataToFirestore(String userId, Map<String, dynamic> userData) async {
-  try {
-    print('Attempting to save user data for user ID: $userId');
-    print('User data: $userData');
-    await _firestore.collection('user').doc(userId).set(userData);
-    print('User data successfully saved to Firestore');
-  } catch (e) {
-    print('Error saving user data: $e');
-    // Print stack trace for more detailed error information
-    print(StackTrace.current);
-    throw e;
+    try {
+      // First, test if Firestore is accessible
+      print('Testing Firestore connection...');
+      final firestore = FirebaseFirestore.instance;
+      
+      // Try to get Firestore metadata
+      print('Attempting to save user data for user ID: $userId');
+      print('User data: $userData');
+      await _firestore.collection('users').doc(userId).set(userData);  // Changed from 'user' to 'users'
+      print('User data successfully saved to Firestore');
+      
+    } catch (e, stackTrace) {
+      print('Error saving user data: $e');
+      print('Stack trace: $stackTrace');
+      print('Firebase project ID: ${DefaultFirebaseOptions.currentPlatform.projectId}');
+      
+      if (e.toString().contains('NOT_FOUND')) {
+        print('Database not found. Please verify:');
+        print('1. Firebase project ID matches');
+        print('2. Firestore database is created');
+        print('3. App has internet permission');
+      }
+      
+      throw e;
+    }
   }
-}
 
   Future<void> _handleSignUp() async {
     if (_formKey.currentState!.validate()) {
@@ -100,6 +115,18 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
       setState(() {
         _isLoading = true;
       });
+
+      // Check if Firebase Auth is initialized
+      if (FirebaseAuth.instance == null) {
+        print('Firebase Auth is not initialized');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Firebase Auth is not initialized'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
       try {
         final UserCredential userCredential = await FirebaseAuth.instance
@@ -190,7 +217,7 @@ class _SignUpPageState extends State<SignUpPage> with SingleTickerProviderStateM
       if (result != null && result.user != null) {
         final User user = result.user!;
         
-        final DocumentSnapshot userDoc = await _firestore.collection('user').doc(user.uid).get();
+        final DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();  // Changed from 'user' to 'users'
         
         if (!userDoc.exists) {
           final userData = {
