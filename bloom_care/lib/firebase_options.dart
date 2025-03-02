@@ -50,19 +50,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyC3H4RaE8KYWn5MxBhbIupDwQZsBUY_BRc',
-    appId: '1:424038520627:android:f8643c08c4e36d5750d046',
-    messagingSenderId: '424038520627',
-    projectId: 'bloom-care-3710c',
-    storageBucket: 'bloom-care-3710c.firebasestorage.app',
+    apiKey: 'AIzaSyBoOkhUKr2o4JzaZKDFHq7NLTBTO1VYxn4',
+    appId: '1:276520827269:android:362f54269aca6c51b36cec',
+    messagingSenderId: '276520827269',
+    projectId: 'bloomcarenew',
+    storageBucket: 'bloomcarenew.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDtSZL_SSgGNylkTp3-4fmkOoBeChCYLJ4',
-    appId: '1:424038520627:ios:d0bf90b0c099381b50d046',
-    messagingSenderId: '424038520627',
-    projectId: 'bloom-care-3710c',
-    storageBucket: 'bloom-care-3710c.firebasestorage.app',
+    apiKey: 'AIzaSyAS2axj1btQK5VlWvhkS3OYdqkP5oZFmVQ',
+    appId: '1:276520827269:ios:934524c83abdc462b36cec',
+    messagingSenderId: '276520827269',
+    projectId: 'bloomcarenew',
+    storageBucket: 'bloomcarenew.firebasestorage.app',
     iosBundleId: 'com.example.bloomCare',
   );
+
 }
