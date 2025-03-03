@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'bottom_nav.dart';
+import 'package:bloom_care/widgets/navigation_bar.dart';
 
 class HobbiesPage extends StatefulWidget {
   const HobbiesPage({super.key});

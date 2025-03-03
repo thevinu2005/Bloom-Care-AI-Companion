@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'medicine_page.dart'; // Import MedicinePage
-import 'bottom_nav.dart'; // Import the BottomNav widget
-import 'hobbies_page.dart'; // Import HobbiesPage
+import 'package:bloom_care/screens/hobby_medicine_activity/medicine_page.dart'; // Import MedicinePage
+import 'package:bloom_care/widgets/navigation_bar.dart'; // Import the BottomNav widget
+import 'package:bloom_care/screens/hobby_medicine_activity/hobbies_page.dart'; // Import HobbiesPage
 
 class ActivityPage extends StatelessWidget {
   const ActivityPage({super.key});
