@@ -237,4 +237,70 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
     );
   }
 
+  Widget _buildCaregiverCard(Caregiver caregiver) {
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      color: Color(0xFFE6F0FF),
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 25,
+              backgroundImage: caregiver.imageUrl.startsWith('http')
+                  ? NetworkImage(caregiver.imageUrl) as ImageProvider
+                  : AssetImage(caregiver.imageUrl),
+              backgroundColor: Colors.grey.shade300,
+              onBackgroundImageError: (_, __) {
+                // Handle error silently
+              },
+            ),
+            SizedBox(width: 16.0),
+            Expanded(
+              child: Text(
+                caregiver.name,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16.0,
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    // View caregiver profile
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFFFFF80),
+                    foregroundColor: Colors.black,
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  ),
+                  child: Text('View'),
+                ),
+                SizedBox(width: 8.0),
+                ElevatedButton(
+                  onPressed: () => _addCaregiver(caregiver.id),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        caregiver.isAdded ? Colors.grey : Color(0xFF80FF80),
+                    foregroundColor: Colors.black,
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  ),
+                  child: Text(caregiver.isAdded ? 'Added' : 'Add +'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+}
