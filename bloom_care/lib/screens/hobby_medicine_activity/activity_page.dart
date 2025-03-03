@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:bloom_care/screens/hobby_medicine_activity/medicine_page.dart'; // Import MedicinePage
-import 'package:bloom_care/widgets/navigation_bar.dart'; // Import the BottomNav widget
-import 'package:bloom_care/screens/hobby_medicine_activity/hobbies_page.dart'; // Import HobbiesPage
+import 'medicine_page.dart'; // Import MedicinePage
+import 'bottom_nav.dart'; // Import the BottomNav widget
+import 'hobbies_page.dart'; // Import HobbiesPage
+import 'daily_activities_page.dart'; // Add this import
 
 class ActivityPage extends StatelessWidget {
   const ActivityPage({super.key});
@@ -124,20 +125,20 @@ class ActivityPage extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // Main Activity Cards with more creative design
-                _buildCreativeActivityCard(
-                  context,
-                  'Hobbies & Interests',
-                  'Explore and manage your favorite activities',
-                  Icons.sports_esports,
-                  Color(0xFF8FA2E6),
-                  Color(0xFFB3C1F0),
-                      () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HobbiesPage()),
-                    );
-                  },
-                ),
+                  _buildCreativeActivityCard(
+                    context,
+                    'Hobbies & Interests',
+                    'Explore and manage your favorite activities',
+                    Icons.sports_esports,
+                    Color(0xFF8FA2E6),
+                    Color(0xFFB3C1F0),
+                        () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const HobbiesPage()),
+                      );
+                    },
+                  ),
 
                   const SizedBox(height: 16),
 
@@ -165,9 +166,14 @@ class ActivityPage extends StatelessWidget {
                     Icons.people_alt_outlined,
                     Color(0xFF5D77D6),
                     Color(0xFFCBD6F9),
-                        () {},
+                        () {
+
+                    },
                   ),
 
+                  const SizedBox(height: 16),
+
+                  // In your ActivityPage class, replace the Daily Activities card with this:
                   const SizedBox(height: 16),
 
                   _buildCreativeActivityCard(
@@ -177,9 +183,13 @@ class ActivityPage extends StatelessWidget {
                     Icons.event_note,
                     Color(0xFF4A5578),
                     Color(0xFFB3C1F0),
-                        () {},
+                        () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const DailyActivitiesPage()),
+                      );
+                    },
                   ),
-
                   const SizedBox(height: 20),
 
                   // Need Assistance section removed

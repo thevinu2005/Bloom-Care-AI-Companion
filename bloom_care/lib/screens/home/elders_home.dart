@@ -164,7 +164,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
             );
           },
         ),
-        
+
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: _userStream,
