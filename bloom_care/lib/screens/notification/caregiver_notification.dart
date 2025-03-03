@@ -517,4 +517,97 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
                         },
                       ),
               ),
-              
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      spreadRadius: 1,
+                      blurRadius: 5,
+                      offset: const Offset(0, -3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                        label: const Text(
+                          'Mark all as read',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        onPressed: () {
+                          _markAllAsUnread();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('All notifications marked as unread'),
+                              duration: Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.green,
+                          backgroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: Colors.green, width: 1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        _showCategoryDialog('all');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: _activeFilter == 'all' ? Colors.white : Colors.blue,
+                        backgroundColor: _activeFilter == 'all' ? Colors.blue : Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        side: const BorderSide(color: Colors.blue, width: 1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text(
+                        'All',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        _showCategoryDialog('today');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: _activeFilter == 'today' ? Colors.white : Colors.blue,
+                        backgroundColor: _activeFilter == 'today' ? Colors.blue : Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        side: const BorderSide(color: Colors.blue, width: 1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text(
+                        'Today',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
