@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:bloom_care/screens/emotion_check/emotion_check.dart';
+import 'package:bloom_care/screens/hobby_medicine_activity/activity_page.dart';
+import 'dart:math';
+
 
 class BloomCareHomePage extends StatefulWidget {
   const BloomCareHomePage({super.key});
@@ -10,258 +17,440 @@ class BloomCareHomePage extends StatefulWidget {
 
 class _BloomCareHomePageState extends State<BloomCareHomePage> {
   String? selectedMood;
+  bool _isLoading = true;
+  Map<String, dynamic>? _userData;
+  late Stream<DocumentSnapshot> _userStream;
+  late Stream<String> _timeStream;
+  
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupStreams();
+    _startTimeStream();
+  }
+
+  void _setupStreams() {
+    final user = _auth.currentUser;
+    if (user != null) {
+      _userStream = _firestore
+          .collection('users')
+          .doc(user.uid)
+          .snapshots();
+
+      // Load initial mood
+      _loadCurrentMood();
+    }
+  }
+
+  Stream<String> _getTimeStream() {
+    return Stream.periodic(const Duration(seconds: 1), (_) {
+      return DateFormat('MMMM d, yyyy').format(DateTime.now());
+    });
+  }
+
+  void _startTimeStream() {
+    _timeStream = _getTimeStream();
+  }
+
+  Future<void> _loadCurrentMood() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        final latestMood = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('emotions')
+            .orderBy('timestamp', descending: true)
+            .limit(1)
+            .get();
+
+        if (latestMood.docs.isNotEmpty) {
+          setState(() {
+            selectedMood = latestMood.docs.first.data()['emotion'];
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading mood: $e');
+    }
+  }
+
+  Future<void> _saveMoodToFirebase(String mood) async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('emotions')
+            .add({
+          'emotion': mood,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+
+        print('Mood saved successfully');
+      }
+    } catch (e) {
+      print('Error saving mood: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving mood: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _getInitials(String name) {
+    final nameParts = name.split(' ');
+    if (nameParts.length >= 2) {
+      return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+    }
+    return name.substring(0, min(2, name.length)).toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFD7E0FA), // Light blue background
+      backgroundColor: const Color(0xFFD7E0FA),
       appBar: AppBar(
-        backgroundColor: Color(0xFF8FA2E6), // App bar color
-        elevation: 0, // Remove shadow for a cleaner look
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Colors.white,
-              radius: 20,
-              child: Text(
-                "IW",
-                style: TextStyle(
-                  color: Color(0xFF8FA2E6),
-                  fontWeight: FontWeight.bold,
+        backgroundColor: const Color(0xFF8FA2E6),
+        elevation: 0,
+        title: StreamBuilder<DocumentSnapshot>(
+          stream: _userStream,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Text('Error loading user data');
+            }
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const CircularProgressIndicator();
+            }
+
+            final userData = snapshot.data?.data() as Map<String, dynamic>?;
+            final name = userData?['name'] ?? 'User';
+
+            return Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Colors.white,
+                  radius: 20,
+                  child: Text(
+                    _getInitials(name),
+                    style: const TextStyle(
+                      color: Color(0xFF8FA2E6),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Welcome Back,',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-                ),
-                Text(
-                  'Imsarie Williams',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Welcome Back,',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+                    ),
+                    Text(
+                      name,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
               ],
-            ),
-          ],
+            );
+          },
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications_none_rounded, size: 28),
+            icon: const Icon(Icons.notifications_none_rounded, size: 28),
             onPressed: () {},
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Greeting and Date
-            Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'How are you today?',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A5578),
-                    ),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'March 1, 2025',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF6B84DC),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: _userStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(child: Text('Error loading user data'));
+          }
 
-            // Mood Section with larger buttons and better spacing
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFF8FA2E6).withOpacity(0.15),
-                    spreadRadius: 0,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final userData = snapshot.data?.data() as Map<String, dynamic>?;
+          if (userData == null) {
+            return const Center(child: Text('No user data found'));
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(Icons.mood, color: Color(0xFF6B84DC), size: 24),
-                      SizedBox(width: 10),
-                      Text(
-                        'How is your mood today?',
+                      const Text(
+                        'How are you today?',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF4A5578),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _buildMoodButton('Happy', '😊'),
-                      _buildMoodButton('Relaxed', '😌'),
-                      _buildMoodButton('Tired', '😫'),
-                      _buildMoodButton('Stressed', '😰'),
-                      _buildMoodButton('Anxious', '😨'),
-                      _buildMoodButton('Lonely', '🥺'),
-                    ],
-                  ),
-                  if (selectedMood != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Color(0xFFD7E0FA),
-                        borderRadius: BorderRadius.circular(8),
+                      StreamBuilder<String>(
+                        stream: _timeStream,
+                        builder: (context, snapshot) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              snapshot.data ?? '',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF6B84DC),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      child: Text(
-                        'You selected: $selectedMood',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF4A5578),
-                          fontWeight: FontWeight.w500,
+                    ],
+                  ),
+                ),
+
+                // Mood Section
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF8FA2E6).withOpacity(0.15),
+                        spreadRadius: 0,
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.mood, color: Color(0xFF6B84DC), size: 24),
+                          SizedBox(width: 10),
+                          Text(
+                            'How is your mood today?',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A5578),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          _buildMoodButton('Happy', '😊'),
+                          _buildMoodButton('Relaxed', '😌'),
+                          _buildMoodButton('Tired', '😫'),
+                          _buildMoodButton('Stressed', '😰'),
+                          _buildMoodButton('Anxious', '😨'),
+                          _buildMoodButton('Lonely', '🥺'),
+                        ],
+                      ),
+                      if (selectedMood != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD7E0FA),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'You selected: $selectedMood',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF4A5578),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Quick Actions
+                const Text(
+                  'Quick Actions',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4A5578),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Daily Activities',
+                        Icons.directions_run,
+                        const Color(0xFF8FA2E6),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildActionCard2(
+                        'Daily reminders',
+                        Icons.event_note,
+                        const Color(0xFF8FA2E6),
                       ),
                     ),
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+                ),
 
-            // Quick Actions with improved layout
-            Text(
-              'Quick Actions',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF4A5578),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: _buildActionCard('Daily Activities', Icons.directions_run, Color(0xFF8FA2E6))),
-                SizedBox(width: 16),
-                Expanded(child: _buildActionCard('Daily reminders',Icons.event_note, Color(0xFF8FA2E6))),
-              ],
-            ),
+                const SizedBox(height: 24),
 
-            const SizedBox(height: 24),
+                // AI Assistant Button
+                _buildAIAssistantBar(),
 
-            // AI Assistant Button with improved design
-            _buildAIAssistantBar(),
+                const SizedBox(height: 24),
 
-            const SizedBox(height: 24),
-
-            // Your Profile Section with improved layout
-            Container(
-              padding: const EdgeInsets.all(20),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFF8FA2E6).withOpacity(0.15),
-                    spreadRadius: 0,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
+                // Profile Section
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF8FA2E6).withOpacity(0.15),
+                        spreadRadius: 0,
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.person, color: Color(0xFF6B84DC), size: 24),
-                      SizedBox(width: 10),
-                      Text(
-                        'Your Profile',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF4A5578),
+                      Row(
+                        children: const [
+                          Icon(Icons.person, color: Color(0xFF6B84DC), size: 24),
+                          SizedBox(width: 10),
+                          Text(
+                            'Your Profile',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A5578),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F7FD),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFD7E0FA)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildProfileInfoRow('Name:', userData['name'] ?? 'Not set'),
+                            const Divider(height: 24, color: Color(0xFFD7E0FA)),
+                            _buildProfileInfoRow(
+                              'Age:',
+                              _calculateAge(userData['dateOfBirth']),
+                            ),
+                            const Divider(height: 24, color: Color(0xFFD7E0FA)),
+                            _buildProfileInfoRow(
+                              'Caregiver:',
+                              userData['caregiverName'] ?? 'Not assigned',
+                            ),
+                            const Divider(height: 24, color: Color(0xFFD7E0FA)),
+                            _buildProfileInfoRow(
+                              'Next Appointment:',
+                              userData['nextAppointment'] ?? 'Not scheduled',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: ElevatedButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.edit, size: 18),
+                          label: const Text('Update Profile'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6B84DC),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF5F7FD),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Color(0xFFD7E0FA)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildProfileInfoRow('Name:', 'Imsarie Williams'),
-                        Divider(height: 24, color: Color(0xFFD7E0FA)),
-                        _buildProfileInfoRow('Age:', '68 years'),
-                        Divider(height: 24, color: Color(0xFFD7E0FA)),
-                        _buildProfileInfoRow('Caregiver:', 'Dr. Michael Chen'),
-                        Divider(height: 24, color: Color(0xFFD7E0FA)),
-                        _buildProfileInfoRow('Next Appointment:', 'March 5, 2025'),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: Icon(Icons.edit, size: 18),
-                      label: Text('Update Profile'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF6B84DC),
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
       bottomNavigationBar: const BottomNav(currentIndex: 0),
     );
+  }
+
+  String _calculateAge(String? dateOfBirth) {
+    if (dateOfBirth == null) return 'Age not set';
+    
+    try {
+      final parts = dateOfBirth.split('/');
+      if (parts.length != 3) return 'Invalid date';
+      
+      final birthDate = DateTime(
+        int.parse(parts[2]), // year
+        int.parse(parts[1]), // month
+        int.parse(parts[0]), // day
+      );
+      
+      final age = DateTime.now().difference(birthDate).inDays ~/ 365;
+      return '$age years';
+    } catch (e) {
+      return 'Invalid date';
+    }
   }
 
   Widget _buildProfileInfoRow(String label, String value) {
@@ -270,7 +459,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             color: Color(0xFF6B84DC),
             fontWeight: FontWeight.w500,
@@ -278,7 +467,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
         ),
         Text(
           value,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             color: Color(0xFF4A5578),
             fontWeight: FontWeight.w600,
@@ -291,29 +480,32 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
   Widget _buildMoodButton(String mood, String emoji) {
     final isSelected = selectedMood == mood;
     return InkWell(
-      onTap: () {
+      onTap: () async {
         setState(() {
           selectedMood = mood;
         });
+        await _saveMoodToFirebase(mood);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Color(0xFFB3C1F0) : Colors.white,
+          color: isSelected ? const Color(0xFFB3C1F0) : Colors.white,
           border: Border.all(
-            color: isSelected ? Color(0xFF6B84DC) : Color(0xFFD7E0FA),
+            color: isSelected
+                ? const Color(0xFF6B84DC)
+                : const Color(0xFFD7E0FA),
             width: 2,
           ),
           borderRadius: BorderRadius.circular(30),
           boxShadow: isSelected
               ? [
-            BoxShadow(
-              color: Color(0xFF8FA2E6).withOpacity(0.2),
-              spreadRadius: 0,
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ]
+                  BoxShadow(
+                    color: const Color(0xFF8FA2E6).withOpacity(0.2),
+                    spreadRadius: 0,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
               : null,
         ),
         child: Row(
@@ -327,7 +519,9 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
             Text(
               mood,
               style: TextStyle(
-                color: isSelected ? Color(0xFF4A5578) : Color(0xFF6B84DC),
+                color: isSelected
+                    ? const Color(0xFF4A5578)
+                    : const Color(0xFF6B84DC),
                 fontWeight: FontWeight.w500,
                 fontSize: 16,
               ),
@@ -344,9 +538,9 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () {
-          if (title == 'Daily Activities') {
-            Navigator.pushNamed(context, '/activity');
-          }
+          Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const ActivityPage()),
+         );
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
@@ -355,7 +549,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: EdgeInsets.all(12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   shape: BoxShape.circle,
@@ -365,13 +559,60 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                   color: Color(0xFF4A5578),
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
+              Text(
+                'Tap to view',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  Widget _buildActionCard2(String title, IconData icon, Color color) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const ActivityPage()),
+         );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 32, color: color),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF4A5578),
+                ),
+              ),
+              const SizedBox(height: 4),
               Text(
                 'Tap to view',
                 style: TextStyle(
@@ -389,13 +630,15 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
   Widget _buildAIAssistantBar() {
     return InkWell(
       onTap: () {
-        // Add AI assistant navigation
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const EmotionCheck()),
+         );
       },
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             colors: [Color(0xFF6B84DC), Color(0xFF8FA2E6)],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
@@ -403,25 +646,25 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF6B84DC).withOpacity(0.3),
+              color: const Color(0xFF6B84DC).withOpacity(0.3),
               spreadRadius: 0,
               blurRadius: 10,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(10),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.smart_toy, color: Colors.white, size: 24),
+              child: const Icon(Icons.smart_toy, color: Colors.white, size: 24),
             ),
-            SizedBox(width: 16),
-            Expanded(
+            const SizedBox(width: 16),
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -437,17 +680,18 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                   Text(
                     'Ask questions or get help with daily tasks',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white,
                       fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
           ],
         ),
       ),
     );
   }
 }
+
