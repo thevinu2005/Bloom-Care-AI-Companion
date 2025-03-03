@@ -162,4 +162,149 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
     );
   }
 
-  
+  // Basic info card
+  Widget _buildBasicInfoCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.person, color: Color(0xFF6B84DC)),
+                SizedBox(width: 8),
+                Text(
+                  'Personal Information',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const Divider(),
+            const SizedBox(height: 8),
+            _infoRow('Age', _elder.age.toString()),
+            _infoRow('Date of Birth', '${_elder.dateOfBirth.month}/${_elder.dateOfBirth.day}/${_elder.dateOfBirth.year}'),
+            _infoRow('Gender', _elder.gender),
+            _infoRow('Room Number', _elder.roomNumber),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Medical info card
+  Widget _buildMedicalInfoCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.medical_services, color: Color(0xFF6B84DC)),
+                SizedBox(width: 8),
+                Text(
+                  'Medical Information',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const Divider(),
+            const SizedBox(height: 8),
+            _infoRow('Blood Type', _elder.bloodType),
+            _infoRow('Allergies', _elder.allergies.isEmpty ? 'None' : _elder.allergies.join(', ')),
+            _infoRow('Medications', _elder.medications.isEmpty ? 'None' : _elder.medications.join(', ')),
+            _infoRow('Medical Conditions', _elder.medicalConditions.isEmpty ? 'None' : _elder.medicalConditions.join(', ')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Emergency contact card
+  Widget _buildEmergencyContactCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.emergency, color: Color(0xFF6B84DC)),
+                SizedBox(width: 8),
+                Text(
+                  'Emergency Contact',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const Divider(),
+            const SizedBox(height: 8),
+            _infoRow('Name', _elder.emergencyContact.name),
+            _infoRow('Relationship', _elder.emergencyContact.relationship),
+            _infoRow('Phone', _elder.emergencyContact.phone),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  icon: const Icon(Icons.phone),
+                  label: const Text('Call'),
+                  onPressed: () {
+                    _showMessage('Calling ${_elder.emergencyContact.name}...');
+                  },
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  icon: const Icon(Icons.message),
+                  label: const Text('Message'),
+                  onPressed: () {
+                    _showMessage('Messaging ${_elder.emergencyContact.name}...');
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Simple info row
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
