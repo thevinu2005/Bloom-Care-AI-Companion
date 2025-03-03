@@ -328,3 +328,142 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
     );
   }
 
+  // Helper method to format current date
+  String _getFormattedDate() {
+    final now = DateTime.now();
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${months[now.month - 1]} ${now.day}, ${now.year}';
+  }
+
+  // Section header widget
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF8FA2E6),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF5D77D6),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Meal item widget
+  Widget _buildMealItem(MealPlan meal) {
+    return Dismissible(
+      key: UniqueKey(),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: EdgeInsets.only(right: 20),
+        color: Colors.red,
+        child: Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (direction) {
+        setState(() {
+          mealPlans.remove(meal);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Meal plan deleted'),
+            backgroundColor: Color(0xFF8FA2E6),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD7E0FA),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.restaurant,
+              color: Color(0xFF8FA2E6),
+            ),
+          ),
+          title: Text(
+            meal.mealType,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5D77D6),
+            ),
+          ),
+          subtitle: Text(
+            '${meal.time} - ${meal.description}',
+            style: TextStyle(
+              color: Colors.grey[600],
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Checkbox(
+                value: meal.isCompleted,
+                activeColor: const Color(0xFF8FA2E6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                onChanged: (bool? value) {
+                  setState(() {
+                    meal.isCompleted = value ?? false;
+                  });
+                },
+              ),
+              IconButton(
+                icon: Icon(Icons.delete, color: Colors.red[300]),
+                onPressed: () {
+                  _showDeleteConfirmationDialog(
+                    context,
+                    'Delete Meal',
+                    'Are you sure you want to delete this meal plan?',
+                        () {
+                      setState(() {
+                        mealPlans.remove(meal);
+                      });
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+          onTap: () {
+            // Open edit dialog or screen
+            _editMealPlan(meal);
+          },
+        ),
+      ),
+    );
+  }
