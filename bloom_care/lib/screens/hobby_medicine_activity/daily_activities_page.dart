@@ -688,3 +688,99 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
       ),
     );
   }
+
+  // Delete confirmation dialog
+  void _showDeleteConfirmationDialog(BuildContext context, String title, String message, Function onConfirm) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+              onPressed: () {
+                onConfirm();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Edit meal plan dialog
+  void _editMealPlan(MealPlan meal) {
+    TextEditingController timeController = TextEditingController(text: meal.time);
+    TextEditingController typeController = TextEditingController(text: meal.mealType);
+    TextEditingController descController = TextEditingController(text: meal.description);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Meal Plan'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: timeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Time',
+                    prefixIcon: Icon(Icons.access_time),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: typeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Meal Type',
+                    prefixIcon: Icon(Icons.restaurant),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    prefixIcon: Icon(Icons.description),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Save'),
+              onPressed: () {
+                setState(() {
+                  meal.time = timeController.text;
+                  meal.mealType = typeController.text;
+                  meal.description = descController.text;
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
