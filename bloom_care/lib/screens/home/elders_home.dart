@@ -164,12 +164,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
             );
           },
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded, size: 28),
-            onPressed: () {},
-          ),
-        ],
+
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: _userStream,
@@ -324,8 +319,8 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildActionCard2(
-                        'Daily reminders',
-                        Icons.event_note,
+                        'Healthy check-in',
+                        Icons.health_and_safety,
                         const Color(0xFF8FA2E6),
                       ),
                     ),
