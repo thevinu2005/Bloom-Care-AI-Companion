@@ -108,3 +108,96 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
             color: Colors.white,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save, color: Colors.white),
+            onPressed: _saveChanges,
+            tooltip: 'Save Changes',
+          ),
+        ],
+      ),
+      body: _buildDailyActivitiesContent(),
+      bottomNavigationBar: const BottomNav(currentIndex: 0), // Added BottomNav with currentIndex 0
+    );
+  }
+
+  // Daily activities content
+  Widget _buildDailyActivitiesContent() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with curved bottom
+          Container(
+            padding: const EdgeInsets.only(bottom: 20),
+            decoration: const BoxDecoration(
+              color: Color(0xFF8FA2E6),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Center(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Today, ${_getFormattedDate()}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Meal Planning Section
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader('Meal Plan', Icons.restaurant),
+                const SizedBox(height: 15),
+                ...mealPlans.map((meal) => _buildMealItem(meal)).toList(),
+
+                // Add meal button
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: InkWell(
+                    onTap: () {
+                      // Add functionality to add new meal
+                      setState(() {
+                        mealPlans.add(MealPlan(
+                          time: "Time",
+                          mealType: "Meal Type",
+                          description: "Description",
+                          isCompleted: false,
+                        ));
+                      });
+                    },
