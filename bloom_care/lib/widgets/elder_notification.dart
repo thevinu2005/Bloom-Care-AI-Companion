@@ -110,4 +110,55 @@ class _NotificationPageState extends State<NotificationPage> {
       categories = ['daily', 'weekly', 'monthly'];
     }
     
-    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select ${filterType == 'all' ? 'Category' : 'Frequency'}'),
+          content: SizedBox(
+            width: double.minPositive,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: categories.length,
+              itemBuilder: (BuildContext context, int index) {
+                return ListTile(
+                  title: Text(
+                    categories[index].substring(0, 1).toUpperCase() + 
+                    categories[index].substring(1),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _activeFilter = filterType;
+                      _activeCategory = categories[index];
+                    });
+                    Navigator.of(context).pop();
+                  },
+                );
+              },
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Show All'),
+              onPressed: () {
+                setState(() {
+                  _activeFilter = filterType;
+                  _activeCategory = 'none';
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+ 
