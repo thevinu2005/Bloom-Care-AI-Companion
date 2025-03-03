@@ -165,4 +165,76 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
     });
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color(0xFFE6F0FF),
+        elevation: 0,
+        title: Text(
+          'Add Your Caregiver',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            // Navigate back
+            Navigator.of(context).pop();
+          },
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Icon(
+              Icons.people_alt_outlined,
+              color: Colors.blue,
+            ),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            color: Color(0xFFE6F0FF),
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search Caregiver',
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
+                suffixIcon: Icon(Icons.search),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _isSearching
+                ? ListView.builder(
+                    itemCount: _filteredCaregivers.length,
+                    itemBuilder: (context, index) {
+                      final caregiver = _filteredCaregivers[index];
+                      return _buildCaregiverCard(caregiver);
+                    },
+                  )
+                : Center(
+                    child: Text(
+                      'Search for caregivers to add',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16.0,
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
