@@ -543,3 +543,148 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                   });
                 },
               ),
+              IconButton(
+                icon: Icon(Icons.delete, color: Colors.red[300]),
+                onPressed: () {
+                  _showDeleteConfirmationDialog(
+                    context,
+                    'Delete Hobby',
+                    'Are you sure you want to delete this hobby time?',
+                        () {
+                      setState(() {
+                        hobbyTimes.remove(hobby);
+                      });
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+          onTap: () {
+            // Open edit dialog or screen
+            _editHobbyTime(hobby);
+          },
+        ),
+      ),
+    );
+  }
+
+  // Appointment item widget
+  Widget _buildAppointmentItem(Appointment appointment) {
+    return Dismissible(
+      key: UniqueKey(),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: EdgeInsets.only(right: 20),
+        color: Colors.red,
+        child: Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (direction) {
+        setState(() {
+          appointments.remove(appointment);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Appointment deleted'),
+            backgroundColor: Color(0xFF8FA2E6),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD7E0FA),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.event,
+              color: Color(0xFF8FA2E6),
+            ),
+          ),
+          title: Text(
+            appointment.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5D77D6),
+            ),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${appointment.date} at ${appointment.time}',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                ),
+              ),
+              Text(
+                appointment.location,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+          isThreeLine: true,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: appointment.isConfirmed
+                      ? const Color(0xFFD7E0FA)
+                      : Colors.amber.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  appointment.isConfirmed ? 'Confirmed' : 'Pending',
+                  style: TextStyle(
+                    color: appointment.isConfirmed
+                        ? const Color(0xFF5D77D6)
+                        : Colors.amber[800],
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.delete, color: Colors.red[300]),
+                onPressed: () {
+                  _showDeleteConfirmationDialog(
+                    context,
+                    'Delete Appointment',
+                    'Are you sure you want to delete this appointment?',
+                        () {
+                      setState(() {
+                        appointments.remove(appointment);
+                      });
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+          onTap: () {
+            // Open edit dialog or screen
+            _editAppointment(appointment);
+          },
+        ),
+      ),
+    );
+  }
