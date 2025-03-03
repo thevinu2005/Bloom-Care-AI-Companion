@@ -308,3 +308,112 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
       ),
     );
   }
+
+  // Navigation method to edit profile
+  void _navigateToEditProfile() {
+    // Show edit profile dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Profile'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(labelText: 'Name'),
+                controller: TextEditingController(text: _elder.name),
+                onChanged: (value) {
+                  setState(() {
+                    _elder.name = value;
+                  });
+                },
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Age'),
+                controller: TextEditingController(text: _elder.age.toString()),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  setState(() {
+                    _elder.age = int.tryParse(value) ?? _elder.age;
+                  });
+                },
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Gender'),
+                controller: TextEditingController(text: _elder.gender),
+                onChanged: (value) {
+                  setState(() {
+                    _elder.gender = value;
+                  });
+                },
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Room Number'),
+                controller: TextEditingController(text: _elder.roomNumber),
+                onChanged: (value) {
+                  setState(() {
+                    _elder.roomNumber = value;
+                  });
+                },
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Blood Type'),
+                controller: TextEditingController(text: _elder.bloodType),
+                onChanged: (value) {
+                  setState(() {
+                    _elder.bloodType = value;
+                  });
+                },
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Allergies (comma separated)'),
+                controller: TextEditingController(text: _elder.allergies.join(', ')),
+                onChanged: (value) {
+                  setState(() {
+                    _elder.allergies = value.split(',').map((e) => e.trim()).toList();
+                  });
+                },
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Medications (comma separated)'),
+                controller: TextEditingController(text: _elder.medications.join(', ')),
+                onChanged: (value) {
+                  setState(() {
+                    _elder.medications = value.split(',').map((e) => e.trim()).toList();
+                  });
+                },
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Medical Conditions (comma separated)'),
+                controller: TextEditingController(text: _elder.medicalConditions.join(', ')),
+                onChanged: (value) {
+                  setState(() {
+                    _elder.medicalConditions = value.split(',').map((e) => e.trim()).toList();
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6B84DC),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              _showMessage('Profile updated');
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+}
