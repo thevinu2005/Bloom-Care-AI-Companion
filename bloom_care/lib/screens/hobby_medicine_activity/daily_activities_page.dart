@@ -784,3 +784,76 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
       },
     );
   }
+
+  // Edit hobby time dialog
+  void _editHobbyTime(HobbyTime hobby) {
+    TextEditingController timeController = TextEditingController(text: hobby.time);
+    TextEditingController activityController = TextEditingController(text: hobby.activity);
+    TextEditingController durationController = TextEditingController(text: hobby.duration);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Hobby Time'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: timeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Time',
+                    prefixIcon: Icon(Icons.access_time),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: activityController,
+                  decoration: const InputDecoration(
+                    labelText: 'Activity',
+                    prefixIcon: Icon(Icons.sports_esports),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: durationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Duration',
+                    prefixIcon: Icon(Icons.timer),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Save'),
+              onPressed: () {
+                setState(() {
+                  hobby.time = timeController.text;
+                  hobby.activity = activityController.text;
+                  hobby.duration = durationController.text;
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Edit appointment dialog
+  void _editAppointment(Appointment appointment) {
+    TextEditingController dateController = TextEditingController(text: appointment.date);
+    TextEditingController timeController = TextEditingController(text: appointment.time);
+    TextEditingController titleController = TextEditingController(text: appointment.title);
+    TextEditingController locationController = TextEditingController(text: appointment.location);
+    bool isConfirmed = appointment.isConfirmed;
