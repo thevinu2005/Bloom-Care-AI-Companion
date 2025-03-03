@@ -260,4 +260,72 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final elder = _elders[index - 1];
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedElder = elder['id'];
+                });
+              },
+              child: Column(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _selectedElder == elder['id'] ? Colors.blue : Colors.transparent,
+                        width: 2,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundImage: AssetImage(elder['imageUrl']),
+                      child: elder['status'] == 'Needs Attention'
+                          ? Align(
+                              alignment: Alignment.topRight,
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    elder['name'].split(' ')[1], // Show only last name
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   
