@@ -626,7 +626,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
       ),
     );
   }
-
+// second botton card to navigate to daily reminders
   Widget _buildAIAssistantBar() {
     return InkWell(
       onTap: () {
