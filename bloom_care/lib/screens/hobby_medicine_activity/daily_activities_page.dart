@@ -467,3 +467,79 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
       ),
     );
   }
+
+  // Hobby item widget
+  Widget _buildHobbyItem(HobbyTime hobby) {
+    return Dismissible(
+      key: UniqueKey(),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: EdgeInsets.only(right: 20),
+        color: Colors.red,
+        child: Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (direction) {
+        setState(() {
+          hobbyTimes.remove(hobby);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hobby time deleted'),
+            backgroundColor: Color(0xFF8FA2E6),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD7E0FA),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.sports_esports,
+              color: Color(0xFF8FA2E6),
+            ),
+          ),
+          title: Text(
+            hobby.activity,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5D77D6),
+            ),
+          ),
+          subtitle: Text(
+            '${hobby.time} - ${hobby.duration}',
+            style: TextStyle(
+              color: Colors.grey[600],
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Checkbox(
+                value: hobby.isCompleted,
+                activeColor: const Color(0xFF8FA2E6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                onChanged: (bool? value) {
+                  setState(() {
+                    hobby.isCompleted = value ?? false;
+                  });
+                },
+              ),
