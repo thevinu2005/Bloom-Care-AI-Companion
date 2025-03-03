@@ -857,3 +857,140 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
     TextEditingController titleController = TextEditingController(text: appointment.title);
     TextEditingController locationController = TextEditingController(text: appointment.location);
     bool isConfirmed = appointment.isConfirmed;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Appointment'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: dateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Date',
+                        prefixIcon: Icon(Icons.calendar_today),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: timeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Time',
+                        prefixIcon: Icon(Icons.access_time),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Title',
+                        prefixIcon: Icon(Icons.title),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: locationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Location',
+                        prefixIcon: Icon(Icons.location_on),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      children: [
+                        const Text('Confirmed:'),
+                        const SizedBox(width: 10),
+                        Switch(
+                          value: isConfirmed,
+                          activeColor: const Color(0xFF8FA2E6),
+                          onChanged: (value) {
+                            setState(() {
+                              isConfirmed = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: const Text('Save'),
+                  onPressed: () {
+                    this.setState(() {
+                      appointment.date = dateController.text;
+                      appointment.time = timeController.text;
+                      appointment.title = titleController.text;
+                      appointment.location = locationController.text;
+                      appointment.isConfirmed = isConfirmed;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// Meal Plan data class
+class MealPlan {
+  String time;
+  String mealType;
+  String description;
+  bool isCompleted;
+
+  MealPlan({
+    required this.time,
+    required this.mealType,
+    required this.description,
+    required this.isCompleted,
+  });
+}
+
+// Hobby Time data class
+class HobbyTime {
+  String time;
+  String activity;
+  String duration;
+  bool isCompleted;
+
+  HobbyTime({
+    required this.time,
+    required this.activity,
+    required this.duration,
+    required this.isCompleted,
+  });
+}
+
+// Appointment data class
+class Appointment {
+  String date;
+  String time;
+  String title;
+  String location;
+  bool isConfirmed;
+
+  Appointment({
+    required this.date,
+    required this.time,
+    required this.title,
+    required this.location,
+    required this.isConfirmed,
+  });
+}
