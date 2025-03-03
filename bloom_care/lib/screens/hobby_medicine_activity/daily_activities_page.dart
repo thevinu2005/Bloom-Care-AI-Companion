@@ -201,3 +201,130 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                         ));
                       });
                     },
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF8FA2E6), width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, color: Color(0xFF8FA2E6)),
+                          SizedBox(width: 5),
+                          Text(
+                            'Add Meal',
+                            style: TextStyle(
+                              color: Color(0xFF8FA2E6),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                // Hobby Time Section
+                _buildSectionHeader('Hobby Time', Icons.sports_esports),
+                const SizedBox(height: 15),
+                ...hobbyTimes.map((hobby) => _buildHobbyItem(hobby)).toList(),
+
+                // Add hobby time button
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: InkWell(
+                    onTap: () {
+                      // Add functionality to add new hobby time
+                      setState(() {
+                        hobbyTimes.add(HobbyTime(
+                          time: "Time",
+                          activity: "Activity",
+                          duration: "Duration",
+                          isCompleted: false,
+                        ));
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF8FA2E6), width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, color: Color(0xFF8FA2E6)),
+                          SizedBox(width: 5),
+                          Text(
+                            'Add Hobby Time',
+                            style: TextStyle(
+                              color: Color(0xFF8FA2E6),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                // Upcoming Appointments Section
+                _buildSectionHeader('Upcoming Appointments', Icons.event),
+                const SizedBox(height: 15),
+                ...appointments.map((appointment) => _buildAppointmentItem(appointment)).toList(),
+
+                // Add appointment button
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: InkWell(
+                    onTap: () {
+                      // Add functionality to add new appointment
+                      setState(() {
+                        appointments.add(Appointment(
+                          date: "Date",
+                          time: "Time",
+                          title: "Appointment Title",
+                          location: "Location",
+                          isConfirmed: false,
+                        ));
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF8FA2E6), width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, color: Color(0xFF8FA2E6)),
+                          SizedBox(width: 5),
+                          Text(
+                            'Add Appointment',
+                            style: TextStyle(
+                              color: Color(0xFF8FA2E6),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
