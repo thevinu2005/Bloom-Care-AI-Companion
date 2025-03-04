@@ -3,6 +3,7 @@ import 'medicine_page.dart'; // Import MedicinePage
 import 'package:bloom_care/widgets/navigation_bar.dart'; // Import the BottomNav widget
 import 'hobbies_page.dart'; // Import HobbiesPage
 import 'daily_activities_page.dart'; // Add this import
+import 'package:bloom_care/screens/caregiver/add_caregiver.dart'; // Add this import
 
 class ActivityPage extends StatelessWidget {
   const ActivityPage({super.key});
@@ -166,8 +167,11 @@ class ActivityPage extends StatelessWidget {
                     Icons.people_alt_outlined,
                     Color(0xFF5D77D6),
                     Color(0xFFCBD6F9),
-                        () {
-
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AddCaregiverScreen()),
+                        );
                     },
                   ),
 
