@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'notification_detail.dart';
+import 'package:bloom_care/widgets/navigation_bar.dart'; // Import the navigation bar
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({Key? key}) : super(key: key);
@@ -424,6 +425,8 @@ class _NotificationPageState extends State<NotificationPage> {
           ),
         ),
       ),
+      bottomNavigationBar: const BottomNav(currentIndex: 2), // Add the navigation bar with notifications tab selected
     );
   }
 }
+

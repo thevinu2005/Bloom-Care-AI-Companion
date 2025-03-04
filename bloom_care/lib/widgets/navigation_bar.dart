@@ -24,7 +24,7 @@ class BottomNav extends StatelessWidget {
         children: [
           _buildNavItem(context, 0, 'assest/icons/home_icon.png', '/'),
           _buildNavItem(context, 1, 'assest/icons/emergency_icon.png', '/emergency'),
-          _buildNavItem(context, 2, 'assest/icons/notification_icon.png', '/notifications'),
+          _buildNavItem(context, 2, 'assest/icons/notification_icon.png', '/eldernotification'),
           _buildNavItem(context, 3, 'assest/icons/profile_icon.png', '/profile'),
         ],
       ),

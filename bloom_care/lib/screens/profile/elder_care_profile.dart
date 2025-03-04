@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'bottom_nav.dart';
+import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 // Define a simple Elder model class
 class Elder {
+  String id;
   String name;
   int age;
   DateTime dateOfBirth;
@@ -14,9 +18,10 @@ class Elder {
   List<String> medicalConditions;
   EmergencyContact emergencyContact;
   String? profileImagePath;
-  List<RecentActivity> recentActivities; // Added this field
+  List<RecentActivity> recentActivities;
 
   Elder({
+    required this.id,
     required this.name,
     required this.age,
     required this.dateOfBirth,
@@ -28,8 +33,75 @@ class Elder {
     required this.medicalConditions,
     required this.emergencyContact,
     this.profileImagePath,
-    this.recentActivities = const [], // Default to empty list
+    this.recentActivities = const [],
   });
+
+  // Create Elder from Firestore document
+  factory Elder.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    
+    // Parse date of birth
+    DateTime dob = DateTime.now().subtract(const Duration(days: 365 * 70)); // Default to 70 years ago
+    if (data['dateOfBirth'] != null) {
+      try {
+        final parts = (data['dateOfBirth'] as String).split('/');
+        if (parts.length == 3) {
+          dob = DateTime(
+            int.parse(parts[2]), // year
+            int.parse(parts[1]), // month
+            int.parse(parts[0]), // day
+          );
+        }
+      } catch (e) {
+        print('Error parsing date of birth: $e');
+      }
+    }
+    
+    // Calculate age
+    final age = DateTime.now().difference(dob).inDays ~/ 365;
+    
+    // Parse emergency contact
+    EmergencyContact contact = EmergencyContact(
+      name: data['emergencyContactName'] ?? 'Not specified',
+      relationship: data['emergencyContactRelationship'] ?? 'Not specified',
+      phone: data['emergencyContactPhone'] ?? 'Not specified',
+    );
+    
+    return Elder(
+      id: doc.id,
+      name: data['name'] ?? 'Unknown',
+      age: age,
+      dateOfBirth: dob,
+      gender: data['gender'] ?? 'Not specified',
+      roomNumber: data['roomNumber'] ?? 'Not specified',
+      bloodType: data['bloodType'] ?? 'Not specified',
+      allergies: List<String>.from(data['allergies'] ?? []),
+      medications: List<String>.from(data['medications'] ?? []),
+      medicalConditions: List<String>.from(data['medicalConditions'] ?? []),
+      emergencyContact: contact,
+      profileImagePath: data['profileImagePath'],
+      recentActivities: [], // We'll load activities separately if needed
+    );
+  }
+  
+  // Convert Elder to Firestore data
+  Map<String, dynamic> toFirestore() {
+    return {
+      'name': name,
+      'dateOfBirth': '${dateOfBirth.day}/${dateOfBirth.month}/${dateOfBirth.year}',
+      'gender': gender,
+      'roomNumber': roomNumber,
+      'bloodType': bloodType,
+      'allergies': allergies,
+      'medications': medications,
+      'medicalConditions': medicalConditions,
+      'emergencyContactName': emergencyContact.name,
+      'emergencyContactRelationship': emergencyContact.relationship,
+      'emergencyContactPhone': emergencyContact.phone,
+      'profileImagePath': profileImagePath,
+      'lastUpdated': FieldValue.serverTimestamp(),
+    };
+  }
 }
 
 // Define EmergencyContact class
@@ -45,7 +117,7 @@ class EmergencyContact {
   });
 }
 
-// Simple activity class to replace the ActivityType enum
+// Simple activity class
 class RecentActivity {
   final String type;
   final String description;
@@ -61,37 +133,138 @@ class RecentActivity {
 }
 
 class ElderCareProfilePage extends StatefulWidget {
-  final Elder elder;
-
-  const ElderCareProfilePage({Key? key, required this.elder}) : super(key: key);
+  const ElderCareProfilePage({Key? key}) : super(key: key);
 
   @override
   State<ElderCareProfilePage> createState() => _ElderCareProfilePageState();
 }
 
 class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
-  late Elder _elder;
-  bool _isLoading = false;
+  Elder? _elder;
+  bool _isLoading = true;
+  String? _errorMessage;
+  
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
     super.initState();
-    _elder = widget.elder;
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+      
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      
+      if (!userDoc.exists) {
+        throw Exception('User profile not found');
+      }
+      
+      setState(() {
+        _elder = Elder.fromFirestore(userDoc);
+        _isLoading = false;
+      });
+      
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateUserData(Elder elder) async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+      
+      await _firestore.collection('users').doc(user.uid).update(elder.toFirestore());
+      
+      setState(() {
+        _elder = elder;
+        _isLoading = false;
+      });
+      
+      _showMessage('Profile updated successfully');
+      
+    } catch (e) {
+      print('Error updating user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      _showMessage('Error updating profile: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        body: const Center(child: CircularProgressIndicator()),
+        bottomNavigationBar: const BottomNav(currentIndex: 3),
+      );
+    }
+    
+    if (_errorMessage != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading profile',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(_errorMessage!),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _loadUserData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: const BottomNav(currentIndex: 3),
+      );
+    }
+    
+    if (_elder == null) {
+      return Scaffold(
+        body: const Center(child: Text('No profile data available')),
+        bottomNavigationBar: const BottomNav(currentIndex: 3),
+      );
+    }
+
     return Scaffold(
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
+      body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 200,
             floating: false,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(_elder.name,
+              title: Text(_elder!.name,
                 style: const TextStyle(
                   fontWeight: FontWeight.w300,
                   shadows: [
@@ -117,9 +290,9 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
                     radius: 60,
                     backgroundColor: Colors.white,
                     child: ClipOval(
-                      child: _elder.profileImagePath != null
+                      child: _elder!.profileImagePath != null
                           ? Image.asset(
-                        _elder.profileImagePath!,
+                        _elder!.profileImagePath!,
                         width: 110,
                         height: 110,
                         fit: BoxFit.cover,
@@ -184,10 +357,10 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
             ),
             const Divider(),
             const SizedBox(height: 8),
-            _infoRow('Age', _elder.age.toString()),
-            _infoRow('Date of Birth', '${_elder.dateOfBirth.month}/${_elder.dateOfBirth.day}/${_elder.dateOfBirth.year}'),
-            _infoRow('Gender', _elder.gender),
-            _infoRow('Room Number', _elder.roomNumber),
+            _infoRow('Age', _elder!.age.toString()),
+            _infoRow('Date of Birth', DateFormat('MM/dd/yyyy').format(_elder!.dateOfBirth)),
+            _infoRow('Gender', _elder!.gender),
+            _infoRow('Room Number', _elder!.roomNumber),
           ],
         ),
       ),
@@ -216,10 +389,10 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
             ),
             const Divider(),
             const SizedBox(height: 8),
-            _infoRow('Blood Type', _elder.bloodType),
-            _infoRow('Allergies', _elder.allergies.isEmpty ? 'None' : _elder.allergies.join(', ')),
-            _infoRow('Medications', _elder.medications.isEmpty ? 'None' : _elder.medications.join(', ')),
-            _infoRow('Medical Conditions', _elder.medicalConditions.isEmpty ? 'None' : _elder.medicalConditions.join(', ')),
+            _infoRow('Blood Type', _elder!.bloodType),
+            _infoRow('Allergies', _elder!.allergies.isEmpty ? 'None' : _elder!.allergies.join(', ')),
+            _infoRow('Medications', _elder!.medications.isEmpty ? 'None' : _elder!.medications.join(', ')),
+            _infoRow('Medical Conditions', _elder!.medicalConditions.isEmpty ? 'None' : _elder!.medicalConditions.join(', ')),
           ],
         ),
       ),
@@ -248,9 +421,9 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
             ),
             const Divider(),
             const SizedBox(height: 8),
-            _infoRow('Name', _elder.emergencyContact.name),
-            _infoRow('Relationship', _elder.emergencyContact.relationship),
-            _infoRow('Phone', _elder.emergencyContact.phone),
+            _infoRow('Name', _elder!.emergencyContact.name),
+            _infoRow('Relationship', _elder!.emergencyContact.relationship),
+            _infoRow('Phone', _elder!.emergencyContact.phone),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -259,7 +432,7 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
                   icon: const Icon(Icons.phone),
                   label: const Text('Call'),
                   onPressed: () {
-                    _showMessage('Calling ${_elder.emergencyContact.name}...');
+                    _showMessage('Calling ${_elder!.emergencyContact.name}...');
                   },
                 ),
                 const SizedBox(width: 8),
@@ -267,7 +440,7 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
                   icon: const Icon(Icons.message),
                   label: const Text('Message'),
                   onPressed: () {
-                    _showMessage('Messaging ${_elder.emergencyContact.name}...');
+                    _showMessage('Messaging ${_elder!.emergencyContact.name}...');
                   },
                 ),
               ],
@@ -311,6 +484,18 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
 
   // Navigation method to edit profile
   void _navigateToEditProfile() {
+    // Create controllers for each field
+    final nameController = TextEditingController(text: _elder!.name);
+    final genderController = TextEditingController(text: _elder!.gender);
+    final roomController = TextEditingController(text: _elder!.roomNumber);
+    final bloodTypeController = TextEditingController(text: _elder!.bloodType);
+    final allergiesController = TextEditingController(text: _elder!.allergies.join(', '));
+    final medicationsController = TextEditingController(text: _elder!.medications.join(', '));
+    final conditionsController = TextEditingController(text: _elder!.medicalConditions.join(', '));
+    final emergencyNameController = TextEditingController(text: _elder!.emergencyContact.name);
+    final emergencyRelationController = TextEditingController(text: _elder!.emergencyContact.relationship);
+    final emergencyPhoneController = TextEditingController(text: _elder!.emergencyContact.phone);
+    
     // Show edit profile dialog
     showDialog(
       context: context,
@@ -322,76 +507,49 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
             children: [
               TextField(
                 decoration: const InputDecoration(labelText: 'Name'),
-                controller: TextEditingController(text: _elder.name),
-                onChanged: (value) {
-                  setState(() {
-                    _elder.name = value;
-                  });
-                },
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Age'),
-                controller: TextEditingController(text: _elder.age.toString()),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  setState(() {
-                    _elder.age = int.tryParse(value) ?? _elder.age;
-                  });
-                },
+                controller: nameController,
               ),
               TextField(
                 decoration: const InputDecoration(labelText: 'Gender'),
-                controller: TextEditingController(text: _elder.gender),
-                onChanged: (value) {
-                  setState(() {
-                    _elder.gender = value;
-                  });
-                },
+                controller: genderController,
               ),
               TextField(
                 decoration: const InputDecoration(labelText: 'Room Number'),
-                controller: TextEditingController(text: _elder.roomNumber),
-                onChanged: (value) {
-                  setState(() {
-                    _elder.roomNumber = value;
-                  });
-                },
+                controller: roomController,
               ),
               TextField(
                 decoration: const InputDecoration(labelText: 'Blood Type'),
-                controller: TextEditingController(text: _elder.bloodType),
-                onChanged: (value) {
-                  setState(() {
-                    _elder.bloodType = value;
-                  });
-                },
+                controller: bloodTypeController,
               ),
               TextField(
                 decoration: const InputDecoration(labelText: 'Allergies (comma separated)'),
-                controller: TextEditingController(text: _elder.allergies.join(', ')),
-                onChanged: (value) {
-                  setState(() {
-                    _elder.allergies = value.split(',').map((e) => e.trim()).toList();
-                  });
-                },
+                controller: allergiesController,
               ),
               TextField(
                 decoration: const InputDecoration(labelText: 'Medications (comma separated)'),
-                controller: TextEditingController(text: _elder.medications.join(', ')),
-                onChanged: (value) {
-                  setState(() {
-                    _elder.medications = value.split(',').map((e) => e.trim()).toList();
-                  });
-                },
+                controller: medicationsController,
               ),
               TextField(
                 decoration: const InputDecoration(labelText: 'Medical Conditions (comma separated)'),
-                controller: TextEditingController(text: _elder.medicalConditions.join(', ')),
-                onChanged: (value) {
-                  setState(() {
-                    _elder.medicalConditions = value.split(',').map((e) => e.trim()).toList();
-                  });
-                },
+                controller: conditionsController,
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const Text(
+                'Emergency Contact',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Name'),
+                controller: emergencyNameController,
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Relationship'),
+                controller: emergencyRelationController,
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Phone'),
+                controller: emergencyPhoneController,
               ),
             ],
           ),
@@ -407,7 +565,30 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
-              _showMessage('Profile updated');
+              // Create updated elder object
+              final updatedElder = Elder(
+                id: _elder!.id,
+                name: nameController.text,
+                age: _elder!.age, // Age is calculated from DOB
+                dateOfBirth: _elder!.dateOfBirth, // Keep the same DOB
+                gender: genderController.text,
+                roomNumber: roomController.text,
+                bloodType: bloodTypeController.text,
+                allergies: allergiesController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+                medications: medicationsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+                medicalConditions: conditionsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+                emergencyContact: EmergencyContact(
+                  name: emergencyNameController.text,
+                  relationship: emergencyRelationController.text,
+                  phone: emergencyPhoneController.text,
+                ),
+                profileImagePath: _elder!.profileImagePath,
+                recentActivities: _elder!.recentActivities,
+              );
+              
+              // Update in Firebase
+              _updateUserData(updatedElder);
+              
               Navigator.pop(context);
             },
             child: const Text('Save'),
@@ -417,3 +598,4 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
     );
   }
 }
+
