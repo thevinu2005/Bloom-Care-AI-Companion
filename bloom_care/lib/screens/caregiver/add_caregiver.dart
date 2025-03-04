@@ -85,6 +85,18 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
         assignedCaregiverIds.addAll(List<String>.from(userData['assignedCaregivers'] ?? []));
       }
       
+      // Get pending caregiver requests
+      final pendingRequestsSnapshot = await _firestore
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('caregiver_requests')
+          .where('status', isEqualTo: 'pending')
+          .get();
+          
+      final List<String> pendingRequestIds = pendingRequestsSnapshot.docs
+          .map((doc) => doc.data()['caregiverId'] as String)
+          .toList();
+      
       // Fetch caregivers and family members
       final QuerySnapshot snapshot = await _firestore
           .collection('users')
@@ -95,7 +107,8 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
       
       for (var doc in snapshot.docs) {
         final caregiver = Caregiver.fromFirestore(doc);
-        final isAdded = assignedCaregiverIds.contains(caregiver.id);
+        final isAdded = assignedCaregiverIds.contains(caregiver.id) || 
+                        pendingRequestIds.contains(caregiver.id);
         
         caregivers.add(Caregiver(
           id: caregiver.id,
@@ -144,52 +157,157 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
         throw Exception('User not logged in');
       }
       
-      final userRef = _firestore.collection('users').doc(currentUser.uid);
-      final userDoc = await userRef.get();
-      
-      if (!userDoc.exists) {
-        throw Exception('User document not found');
-      }
-      
-      final userData = userDoc.data() as Map<String, dynamic>;
-      List<String> assignedCaregivers = List<String>.from(userData['assignedCaregivers'] ?? []);
-      
+      // If already added, we'll remove the caregiver
       if (caregiver.isAdded) {
-        // Remove caregiver
-        assignedCaregivers.remove(caregiver.id);
-      } else {
-        // Add caregiver
-        assignedCaregivers.add(caregiver.id);
-      }
-      
-      // Update in Firestore
-      await userRef.update({
-        'assignedCaregivers': assignedCaregivers
-      });
-      
-      // Update local state
-      setState(() {
-        final index = _allCaregivers.indexWhere((c) => c.id == caregiver.id);
-        if (index != -1) {
-          _allCaregivers[index] = Caregiver(
-            id: caregiver.id,
-            name: caregiver.name,
-            imageUrl: caregiver.imageUrl,
-            isAdded: !caregiver.isAdded,
-            userType: caregiver.userType,
-            createdAt: caregiver.createdAt,
-            dateOfBirth: caregiver.dateOfBirth,
-          );
+        final userRef = _firestore.collection('users').doc(currentUser.uid);
+        final userDoc = await userRef.get();
+        
+        if (!userDoc.exists) {
+          throw Exception('User document not found');
         }
         
-        final filteredIndex = _filteredCaregivers.indexWhere((c) => c.id == caregiver.id);
-        if (filteredIndex != -1) {
-          _filteredCaregivers[filteredIndex] = _allCaregivers[index];
+        final userData = userDoc.data() as Map<String, dynamic>;
+        List<String> assignedCaregivers = List<String>.from(userData['assignedCaregivers'] ?? []);
+        
+        // Remove caregiver
+        assignedCaregivers.remove(caregiver.id);
+        
+        // Update in Firestore
+        await userRef.update({
+          'assignedCaregivers': assignedCaregivers
+        });
+        
+        // Also check if there's a pending request and delete it
+        final requestDoc = await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('caregiver_requests')
+            .doc(caregiver.id)
+            .get();
+            
+        if (requestDoc.exists) {
+          await _firestore
+              .collection('users')
+              .doc(currentUser.uid)
+              .collection('caregiver_requests')
+              .doc(caregiver.id)
+              .delete();
         }
-      });
-      
-      // Show success dialog
-      _showToggleSuccessDialog(caregiver.name, caregiver.isAdded);
+        
+        // Update local state
+        setState(() {
+          final index = _allCaregivers.indexWhere((c) => c.id == caregiver.id);
+          if (index != -1) {
+            _allCaregivers[index] = Caregiver(
+              id: caregiver.id,
+              name: caregiver.name,
+              imageUrl: caregiver.imageUrl,
+              isAdded: false,
+              userType: caregiver.userType,
+              createdAt: caregiver.createdAt,
+              dateOfBirth: caregiver.dateOfBirth,
+            );
+          }
+          
+          final filteredIndex = _filteredCaregivers.indexWhere((c) => c.id == caregiver.id);
+          if (filteredIndex != -1) {
+            _filteredCaregivers[filteredIndex] = _allCaregivers[index];
+          }
+        });
+        
+        // Show success dialog
+        _showToggleSuccessDialog(caregiver.name, true);
+      } else {
+        // If not added, we'll send a request to the caregiver
+        // Get elder's data
+        final elderDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+        if (!elderDoc.exists) {
+          throw Exception('Elder profile not found');
+        }
+
+        final elderData = elderDoc.data()!;
+        final elderName = elderData['name'] ?? 'Unknown Elder';
+        final elderProfileImage = elderData['profileImage'] ?? 'assets/default_avatar.png';
+
+        // Check if there's already a pending request
+        final existingRequestQuery = await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('caregiver_requests')
+            .doc(caregiver.id)
+            .get();
+            
+        if (existingRequestQuery.exists) {
+          final requestData = existingRequestQuery.data();
+          if (requestData != null && requestData['status'] == 'pending') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('You already have a pending request for this caregiver'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            return;
+          }
+        }
+
+        // Create a request in the caregiver's notifications collection
+        await _firestore
+            .collection('users')
+            .doc(caregiver.id)
+            .collection('notifications')
+            .add({
+          'type': 'caregiver_request',
+          'title': 'Caregiver Request',
+          'message': '$elderName is requesting to assign you as their caregiver',
+          'elderName': elderName,
+          'elderId': currentUser.uid,
+          'elderImage': elderProfileImage,
+          'status': 'pending',
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+          'color': const Color(0xFFE2D9F3).value, // Convert to int for Firestore
+          'textColor': const Color(0xFF6A359C).value,
+          'icon': 'person_add', // Store icon name as string
+          'iconColor': Colors.purple.value,
+        });
+
+        // Also store the request in the elder's sent requests
+        await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('caregiver_requests')
+            .doc(caregiver.id)
+            .set({
+          'caregiverId': caregiver.id,
+          'caregiverName': caregiver.name,
+          'status': 'pending',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+
+        // Update local state to show as added (pending)
+        setState(() {
+          final index = _allCaregivers.indexWhere((c) => c.id == caregiver.id);
+          if (index != -1) {
+            _allCaregivers[index] = Caregiver(
+              id: caregiver.id,
+              name: caregiver.name,
+              imageUrl: caregiver.imageUrl,
+              isAdded: true,
+              userType: caregiver.userType,
+              createdAt: caregiver.createdAt,
+              dateOfBirth: caregiver.dateOfBirth,
+            );
+          }
+          
+          final filteredIndex = _filteredCaregivers.indexWhere((c) => c.id == caregiver.id);
+          if (filteredIndex != -1) {
+            _filteredCaregivers[filteredIndex] = _allCaregivers[index];
+          }
+        });
+        
+        // Show success dialog
+        _showToggleSuccessDialog(caregiver.name, false);
+      }
       
     } catch (e) {
       print('Error toggling caregiver assignment: $e');
@@ -242,7 +360,7 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
                 Text(
                   wasAdded
                       ? 'Successfully canceled the request that was sent to caregiver $caregiverName'
-                      : 'Added caregiver $caregiverName successfully',
+                      : 'Request sent to caregiver $caregiverName successfully. They will need to accept your request.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.grey[600],
