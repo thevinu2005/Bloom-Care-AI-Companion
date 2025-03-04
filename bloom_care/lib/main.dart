@@ -6,6 +6,8 @@ import 'package:bloom_care/screens/emergancy/emergancy_page_2.dart';
 import 'package:bloom_care/screens/splash_screen.dart';
 import 'package:bloom_care/screens/home/elders_home.dart';
 import 'package:bloom_care/screens/auth/welcome_page.dart';
+import 'package:bloom_care/screens/profile/elder_care_profile.dart';
+import 'package:bloom_care/screens/notification/elder_notification.dart';
 // import 'package:bloom_care/screens/notifications/notifications_page.dart';
 // import 'package:bloom_care/screens/profile/caregiver_profile.dart';
 
@@ -29,7 +31,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: const Color(0xFF87CEEB),
+        scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
       initialRoute: '/splash',
       routes: {
@@ -38,6 +40,8 @@ class MyApp extends StatelessWidget {
         '/': (context) => const BloomCareHomePage(),
         '/emergency': (context) => const EmergencyServicesScreen(),
         '/emergency2': (context) => const EmergencyPage2(),
+        '/profile': (context) => const ElderCareProfilePage(),
+        '/eldernotification': (context) => const NotificationPage(),
         // '/notifications': (context) => const NotificationsPage(),
         // '/profile': (context) => const ProfilePage(),
       },
