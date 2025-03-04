@@ -1,17 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class Caregiver {
   final String id;
   final String name;
-  final String imageUrl;
+  final String? imageUrl;
   final bool isAdded;
+  final String userType;
+  final DateTime? createdAt;
+  final String? dateOfBirth;
 
   Caregiver({
     required this.id,
     required this.name,
-    required this.imageUrl,
+    this.imageUrl,
     this.isAdded = false,
+    required this.userType,
+    this.createdAt,
+    this.dateOfBirth,
   });
+
+  factory Caregiver.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Caregiver(
+      id: doc.id,
+      name: data['name'] ?? 'Unknown',
+      imageUrl: data['imageUrl'],
+      userType: data['userType'] ?? 'Unknown',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      dateOfBirth: data['dateOfBirth'],
+    );
+  }
 }
 
 class AddCaregiverScreen extends StatefulWidget {
@@ -26,41 +47,79 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
   List<Caregiver> _filteredCaregivers = [];
   List<Caregiver> _allCaregivers = [];
   bool _isSearching = false;
-
+  bool _isLoading = true;
+  String? _errorMessage;
+  
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  
   @override
   void initState() {
     super.initState();
-    // Mock data with temporary profile pictures
-    _allCaregivers = [
-      Caregiver(
-        id: '1',
-        name: 'Mr. Richard Thomsan',
-        imageUrl:
-            'https://familydoctor.org/wp-content/uploads/2018/02/41808433_l-848x566.jpg',
-      ),
-      Caregiver(
-        id: '2',
-        name: 'Mr. David Wilson',
-        imageUrl:
-            'https://img.freepik.com/free-photo/portrait-smiling-male-doctor_171337-1532.jpg',
-      ),
-      Caregiver(
-        id: '3',
-        name: 'Sarah Johnson',
-        imageUrl:
-            'https://img.freepik.com/free-photo/woman-doctor-wearing-lab-coat-with-stethoscope-isolated_1303-29791.jpg',
-      ),
-      Caregiver(
-        id: '4',
-        name: 'Michael Brown',
-        imageUrl:
-            'https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg',
-      ),
-    ];
-
+    _loadCaregiversFromFirebase();
+    
     _searchController.addListener(() {
       _filterCaregivers();
     });
+  }
+
+  Future<void> _loadCaregiversFromFirebase() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    
+    try {
+      // Get current user
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not logged in');
+      }
+      
+      // Get current user's data to check which caregivers are already added
+      final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+      final userData = userDoc.data();
+      final List<String> assignedCaregiverIds = [];
+      
+      if (userData != null && userData.containsKey('assignedCaregivers')) {
+        assignedCaregiverIds.addAll(List<String>.from(userData['assignedCaregivers'] ?? []));
+      }
+      
+      // Fetch caregivers and family members
+      final QuerySnapshot snapshot = await _firestore
+          .collection('users')
+          .where('userType', whereIn: ['caregiver', 'family_member'])
+          .get();
+      
+      final List<Caregiver> caregivers = [];
+      
+      for (var doc in snapshot.docs) {
+        final caregiver = Caregiver.fromFirestore(doc);
+        final isAdded = assignedCaregiverIds.contains(caregiver.id);
+        
+        caregivers.add(Caregiver(
+          id: caregiver.id,
+          name: caregiver.name,
+          imageUrl: caregiver.imageUrl,
+          isAdded: isAdded,
+          userType: caregiver.userType,
+          createdAt: caregiver.createdAt,
+          dateOfBirth: caregiver.dateOfBirth,
+        ));
+      }
+      
+      setState(() {
+        _allCaregivers = caregivers;
+        _isLoading = false;
+      });
+      
+    } catch (e) {
+      print('Error loading caregivers: $e');
+      setState(() {
+        _errorMessage = 'Failed to load caregivers: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   void _filterCaregivers() {
@@ -78,91 +137,271 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
     });
   }
 
-  void _addCaregiver(String caregiverId) {
-    setState(() {
-      final index = _allCaregivers.indexWhere((c) => c.id == caregiverId);
-      if (index != -1) {
-        final caregiver = _allCaregivers[index];
-        final bool wasAdded = caregiver.isAdded; // Store previous state
-
-        _allCaregivers[index] = Caregiver(
-          id: caregiver.id,
-          name: caregiver.name,
-          imageUrl: caregiver.imageUrl,
-          isAdded: !caregiver.isAdded,
-        );
-
-        // Also update in filtered list if present
-        final filteredIndex =
-            _filteredCaregivers.indexWhere((c) => c.id == caregiverId);
+  Future<void> _toggleCaregiverAssignment(Caregiver caregiver) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not logged in');
+      }
+      
+      final userRef = _firestore.collection('users').doc(currentUser.uid);
+      final userDoc = await userRef.get();
+      
+      if (!userDoc.exists) {
+        throw Exception('User document not found');
+      }
+      
+      final userData = userDoc.data() as Map<String, dynamic>;
+      List<String> assignedCaregivers = List<String>.from(userData['assignedCaregivers'] ?? []);
+      
+      if (caregiver.isAdded) {
+        // Remove caregiver
+        assignedCaregivers.remove(caregiver.id);
+      } else {
+        // Add caregiver
+        assignedCaregivers.add(caregiver.id);
+      }
+      
+      // Update in Firestore
+      await userRef.update({
+        'assignedCaregivers': assignedCaregivers
+      });
+      
+      // Update local state
+      setState(() {
+        final index = _allCaregivers.indexWhere((c) => c.id == caregiver.id);
+        if (index != -1) {
+          _allCaregivers[index] = Caregiver(
+            id: caregiver.id,
+            name: caregiver.name,
+            imageUrl: caregiver.imageUrl,
+            isAdded: !caregiver.isAdded,
+            userType: caregiver.userType,
+            createdAt: caregiver.createdAt,
+            dateOfBirth: caregiver.dateOfBirth,
+          );
+        }
+        
+        final filteredIndex = _filteredCaregivers.indexWhere((c) => c.id == caregiver.id);
         if (filteredIndex != -1) {
           _filteredCaregivers[filteredIndex] = _allCaregivers[index];
         }
+      });
+      
+      // Show success dialog
+      _showToggleSuccessDialog(caregiver.name, caregiver.isAdded);
+      
+    } catch (e) {
+      print('Error toggling caregiver assignment: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
-        // Show dialog for both adding and removing
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: wasAdded ? Colors.red : Color(0xFF80FF80),
-                          width: 2,
-                        ),
-                      ),
-                      child: Icon(
-                        wasAdded ? Icons.close : Icons.check,
-                        color: wasAdded ? Colors.red : Color(0xFF80FF80),
-                        size: 40,
-                      ),
+  void _showToggleSuccessDialog(String caregiverName, bool wasAdded) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: wasAdded ? Colors.red : Color(0xFF80FF80),
+                      width: 2,
                     ),
-                    SizedBox(height: 24),
-                    Text(
-                      'Done',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      wasAdded
-                          ? 'Successfully canceled caregiver'
-                          : 'Request sent successfully to caregiver',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Text('OK'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: wasAdded ? Colors.red : Colors.blue,
-                        minimumSize: Size(100, 40),
-                      ),
-                    ),
-                  ],
+                  ),
+                  child: Icon(
+                    wasAdded ? Icons.close : Icons.check,
+                    color: wasAdded ? Colors.red : Color(0xFF80FF80),
+                    size: 40,
+                  ),
                 ),
-              ),
-            );
-          },
+                SizedBox(height: 24),
+                Text(
+                  'Done',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  wasAdded
+                      ? 'Successfully canceled the request that was sent to caregiver $caregiverName'
+                      : 'Added caregiver $caregiverName successfully',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('OK'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: wasAdded ? Colors.red : Colors.blue,
+                    minimumSize: Size(100, 40),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
+      },
+    );
+  }
+
+  void _showCaregiverProfile(Caregiver caregiver) {
+    // Calculate age from date of birth if available
+    String ageText = 'Age not available';
+    if (caregiver.dateOfBirth != null) {
+      try {
+        final parts = caregiver.dateOfBirth!.split('/');
+        if (parts.length == 3) {
+          final birthDate = DateTime(
+            int.parse(parts[2]), // year
+            int.parse(parts[1]), // month
+            int.parse(parts[0]), // day
+          );
+          final age = DateTime.now().difference(birthDate).inDays ~/ 365;
+          ageText = '$age years';
+        }
+      } catch (e) {
+        print('Error calculating age: $e');
       }
-    });
+    }
+    
+    // Format created date
+    String createdDateText = 'Join date not available';
+    if (caregiver.createdAt != null) {
+      createdDateText = 'Joined on ${DateFormat('MMMM d, yyyy').format(caregiver.createdAt!)}';
+    }
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.grey.shade200,
+                  backgroundImage: caregiver.imageUrl != null && caregiver.imageUrl!.isNotEmpty
+                      ? NetworkImage(caregiver.imageUrl!) as ImageProvider
+                      : null,
+                  child: caregiver.imageUrl == null || caregiver.imageUrl!.isEmpty
+                      ? Text(
+                          caregiver.name.isNotEmpty ? caregiver.name[0].toUpperCase() : '?',
+                          style: TextStyle(fontSize: 40, color: Colors.grey.shade700),
+                        )
+                      : null,
+                ),
+                SizedBox(height: 24),
+                Text(
+                  caregiver.name,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  caregiver.userType == 'caregiver' ? 'Caregiver' : 'Family Member',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.blue,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Age:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          Text(
+                            ageText,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Joined:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          Text(
+                            createdDateText,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Close'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    minimumSize: Size(double.infinity, 45),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -181,7 +420,6 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            // Navigate back
             Navigator.of(context).pop();
           },
         ),
@@ -214,23 +452,78 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
             ),
           ),
           Expanded(
-            child: _isSearching
-                ? ListView.builder(
-                    itemCount: _filteredCaregivers.length,
-                    itemBuilder: (context, index) {
-                      final caregiver = _filteredCaregivers[index];
-                      return _buildCaregiverCard(caregiver);
-                    },
-                  )
-                : Center(
-                    child: Text(
-                      'Search for caregivers to add',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16.0,
-                      ),
-                    ),
-                  ),
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : _errorMessage != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error_outline, color: Colors.red, size: 48),
+                            SizedBox(height: 16),
+                            Text(
+                              'Error loading caregivers',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(_errorMessage!),
+                            SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: _loadCaregiversFromFirebase,
+                              child: Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _isSearching
+                        ? _filteredCaregivers.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No caregivers found matching your search',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 16.0,
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: _filteredCaregivers.length,
+                                itemBuilder: (context, index) {
+                                  final caregiver = _filteredCaregivers[index];
+                                  return _buildCaregiverCard(caregiver);
+                                },
+                              )
+                        : _allCaregivers.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.people_alt_outlined,
+                                      size: 64,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'No caregivers or family members available',
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 16.0,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: _allCaregivers.length,
+                                itemBuilder: (context, index) {
+                                  final caregiver = _allCaregivers[index];
+                                  return _buildCaregiverCard(caregiver);
+                                },
+                              ),
           ),
         ],
       ),
@@ -248,30 +541,43 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
           children: [
             CircleAvatar(
               radius: 25,
-              backgroundImage: caregiver.imageUrl.startsWith('http')
-                  ? NetworkImage(caregiver.imageUrl) as ImageProvider
-                  : AssetImage(caregiver.imageUrl),
               backgroundColor: Colors.grey.shade300,
-              onBackgroundImageError: (_, __) {
-                // Handle error silently
-              },
+              backgroundImage: caregiver.imageUrl != null && caregiver.imageUrl!.isNotEmpty
+                  ? NetworkImage(caregiver.imageUrl!) as ImageProvider
+                  : null,
+              child: caregiver.imageUrl == null || caregiver.imageUrl!.isEmpty
+                  ? Text(
+                      caregiver.name.isNotEmpty ? caregiver.name[0].toUpperCase() : '?',
+                      style: TextStyle(fontSize: 20, color: Colors.grey.shade700),
+                    )
+                  : null,
             ),
             SizedBox(width: 16.0),
             Expanded(
-              child: Text(
-                caregiver.name,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16.0,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    caregiver.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16.0,
+                    ),
+                  ),
+                  Text(
+                    caregiver.userType == 'caregiver' ? 'Caregiver' : 'Family Member',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 12.0,
+                    ),
+                  ),
+                ],
               ),
             ),
             Row(
               children: [
                 ElevatedButton(
-                  onPressed: () {
-                    // View caregiver profile
-                  },
+                  onPressed: () => _showCaregiverProfile(caregiver),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xFFFFFF80),
                     foregroundColor: Colors.black,
@@ -281,7 +587,7 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
                 ),
                 SizedBox(width: 8.0),
                 ElevatedButton(
-                  onPressed: () => _addCaregiver(caregiver.id),
+                  onPressed: () => _toggleCaregiverAssignment(caregiver),
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         caregiver.isAdded ? Colors.grey : Color(0xFF80FF80),
@@ -304,3 +610,4 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
     super.dispose();
   }
 }
+
