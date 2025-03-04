@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'medicine_page.dart'; // Import MedicinePage
-import 'bottom_nav.dart'; // Import the BottomNav widget
+import 'package:bloom_care/widgets/navigation_bar.dart'; // Import the BottomNav widget
 import 'hobbies_page.dart'; // Import HobbiesPage
 import 'daily_activities_page.dart'; // Add this import
 
