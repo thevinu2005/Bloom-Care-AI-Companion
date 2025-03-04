@@ -201,10 +201,7 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
                 ),
               ),
             ),
-      bottomNavigationBar: CaregiverNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-      ),
+      bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: 0),
     );
   }
 }
