@@ -606,9 +606,7 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
           ],
         ),
       ),
-      bottomNavigationBar: BottomNav(
-        currentIndex: _currentIndex,
-      ),
+      bottomNavigationBar: const BottomNav( currentIndex: -1),
     );
   }
 }
