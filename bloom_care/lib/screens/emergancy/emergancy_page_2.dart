@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 
 class EmergencyPage2 extends StatefulWidget {
   const EmergencyPage2({Key? key}) : super(key: key);
@@ -10,11 +12,7 @@ class EmergencyPage2 extends StatefulWidget {
   State<EmergencyPage2> createState() => _EmergencyPage2State();
 }
 
-class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProviderStateMixin {
-  // Update the state variables to include caregiver information
-  late AnimationController _animationController;
-  late Animation<double> _animation;
-  bool _isAnimating = false;
+class _EmergencyPage2State extends State<EmergencyPage2> {
   bool _isSendingNotification = false;
   bool _notificationSent = false;
   String _userName = 'User';
@@ -34,21 +32,6 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _animation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    _animationController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _animationController.reverse();
-      } else if (status == AnimationStatus.dismissed) {
-        _animationController.forward();
-      }
-    });
-    
     _loadUserData();
   }
 
@@ -131,6 +114,34 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
     }
   }
 
+  // Add this method to get location permission and current position
+  Future<Position?> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return null;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return null;
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        return null;
+      }
+
+      return await Geolocator.getCurrentPosition();
+    } catch (e) {
+      print('Error getting location: $e');
+      return null;
+    }
+  }
+
+  // Update the _sendEmergencyNotification method
   Future<void> _sendEmergencyNotification() async {
     if (_isSendingNotification || _notificationSent) return;
     
@@ -161,28 +172,44 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
         return;
       }
       
+      // Get current location
+      final Position? position = await _getCurrentLocation();
+      
+      // Get current time formatted
+      final now = DateTime.now();
+      final formattedTime = DateFormat('h:mm a').format(now);
+      
       // Get caregiver data
       final caregiverDoc = await _firestore.collection('users').doc(assignedCaregiverId).get();
       final caregiverName = caregiverDoc.data()?['name'] ?? 'Your Caregiver';
       
-      // Create emergency notification
+      // Create emergency notification with additional details
       await _firestore
           .collection('users')
           .doc(assignedCaregiverId)
           .collection('notifications')
           .add({
         'type': 'emergency',
+        'emergencyType': 'Emergency Button Press',
         'title': 'Emergency Alert',
         'message': '${userData['name']} has triggered an emergency alert and needs immediate assistance!',
         'elderId': user.uid,
         'elderName': userData['name'] ?? 'Elder',
         'elderImage': userData['profileImage'] ?? 'assets/default_avatar.png',
-        'elderStatus': 'Needs Attention',
+        'elderStatus': 'Immediate Attention Required',
         'timestamp': FieldValue.serverTimestamp(),
+        'formattedTime': formattedTime,
+        'location': position != null 
+            ? {
+                'latitude': position.latitude,
+                'longitude': position.longitude,
+                'room': 'Living Room', // You would need to implement room detection logic
+              }
+            : null,
         'isRead': false,
-        'color': const Color(0xFFF8D7DA).value, // Light red background
-        'textColor': const Color(0xFF721C24).value, // Dark red text
-        'icon': 'warning_amber_rounded', // Warning icon
+        'color': const Color(0xFFF8D7DA).value,
+        'textColor': const Color(0xFF721C24).value,
+        'icon': 'warning_amber_rounded',
         'iconColor': Colors.red.value,
         'priority': 'high',
       });
@@ -194,9 +221,18 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
           .collection('emergency_history')
           .add({
         'timestamp': FieldValue.serverTimestamp(),
+        'formattedTime': formattedTime,
         'status': 'active',
         'caregiverId': assignedCaregiverId,
         'caregiverName': caregiverName,
+        'location': position != null 
+            ? {
+                'latitude': position.latitude,
+                'longitude': position.longitude,
+                'room': 'Living Room',
+              }
+            : null,
+        'emergencyType': 'Emergency Button Press',
         'resolved': false,
       });
       
@@ -207,6 +243,13 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
           .update({
         'emergency': true,
         'lastEmergencyTime': FieldValue.serverTimestamp(),
+        'lastEmergencyLocation': position != null 
+            ? {
+                'latitude': position.latitude,
+                'longitude': position.longitude,
+                'room': 'Living Room',
+              }
+            : null,
       });
       
       setState(() {
@@ -275,27 +318,6 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
     );
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  void _toggleAnimation() {
-    setState(() {
-      _isAnimating = !_isAnimating;
-      if (_isAnimating) {
-        _animationController.forward();
-        // Send emergency notification when animation starts
-        _sendEmergencyNotification();
-      } else {
-        _animationController.stop();
-        _animationController.reset();
-      }
-    });
-  }
-
-  // Replace the build method's profile section with this enhanced version
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -431,7 +453,7 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
                 ),
               ),
               
-              // Main Content (keep the rest of the build method the same)
+              // Main Content with white background
               Expanded(
                 child: Container(
                   width: double.infinity,
@@ -480,83 +502,43 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
                           ),
                         ),
                       const Spacer(),
-                      // Animated Concentric Circles Button
-                      Center(
-                        child: GestureDetector(
-                          onTap: _isSendingNotification || !_hasCaregiverAssigned ? null : _toggleAnimation,
-                          child: AnimatedBuilder(
-                            animation: _animation,
-                            builder: (context, child) {
-                              return Transform.scale(
-                                scale: _isAnimating ? _animation.value : 1.0,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Container(
-                                      width: 200,
-                                      height: 200,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: !_hasCaregiverAssigned 
-                                            ? Colors.grey.shade300 
-                                            : Colors.red.shade100,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: !_hasCaregiverAssigned 
-                                                ? Colors.grey.withOpacity(0.3) 
-                                                : Colors.red.withOpacity(0.3),
-                                            spreadRadius: 20,
-                                            blurRadius: 0,
-                                          ),
-                                          BoxShadow(
-                                            color: !_hasCaregiverAssigned 
-                                                ? Colors.grey.withOpacity(0.2) 
-                                                : Colors.red.withOpacity(0.2),
-                                            spreadRadius: 40,
-                                            blurRadius: 0,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Center(
-                                        child: Container(
-                                          width: 100,
-                                          height: 100,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: !_hasCaregiverAssigned 
-                                                ? Colors.grey 
-                                                : Colors.red,
-                                          ),
-                                          child: Center(
-                                            child: Image.asset(
-                                              'assest/icons/caution-sign.png',
-                                              width: 50,
-                                              height: 50,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    if (_isSendingNotification)
-                                      Container(
-                                        width: 200,
-                                        height: 200,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.black.withOpacity(0.3),
-                                        ),
-                                        child: const Center(
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
+                      
+                      // Simple Emergency Button
+                      ElevatedButton.icon(
+                        onPressed: _isSendingNotification || !_hasCaregiverAssigned 
+                            ? null 
+                            : _sendEmergencyNotification,
+                        icon: _isSendingNotification
+                            ? Container(
+                                width: 24,
+                                height: 24,
+                                padding: const EdgeInsets.all(2),
+                                child: const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
                                 ),
-                              );
-                            },
+                              )
+                            : const Icon(Icons.warning_amber_rounded),
+                        label: Text(
+                          _isSendingNotification
+                              ? 'Sending...'
+                              : 'Send Emergency Alert',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          disabledBackgroundColor: Colors.grey,
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -577,10 +559,11 @@ class _EmergencyPage2State extends State<EmergencyPage2> with SingleTickerProvid
                           fontSize: 16,
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const Spacer(),
+
                       // Cancel Button
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 40),
+                        padding: const EdgeInsets.only(bottom: 40, top: 20),
                         child: TextButton(
                           onPressed: () {
                             Navigator.pop(context);
