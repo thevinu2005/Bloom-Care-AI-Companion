@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'bottom_nav.dart'; // Import the BottomNav widget
+import 'package:bloom_care/widgets/navigation_bar.dart'; // Import the BottomNav widget
 
 class DailyActivitiesPage extends StatefulWidget {
   const DailyActivitiesPage({super.key});
