@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'notification_detail.dart';
+import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
 
 class CaregiverNotificationPage extends StatefulWidget {
   const CaregiverNotificationPage({Key? key}) : super(key: key);
@@ -923,6 +924,7 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
           ),
         ),
       ),
+      bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: 1),
     );
   }
 }
