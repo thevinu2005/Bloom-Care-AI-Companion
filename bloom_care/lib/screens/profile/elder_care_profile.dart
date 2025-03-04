@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'bottom_nav.dart';
+import 'package:bloom_care/widgets/navigation_bar.dart';
 
 // Define a simple Elder model class
 class Elder {
@@ -61,9 +61,38 @@ class RecentActivity {
 }
 
 class ElderCareProfilePage extends StatefulWidget {
-  final Elder elder;
+  final Elder? elder; // Made elder optional by making it nullable
 
-  const ElderCareProfilePage({Key? key, required this.elder}) : super(key: key);
+  const ElderCareProfilePage({Key? key, this.elder}) : super(key: key); // Removed required keyword
+
+  // Added static method to create a default elder
+  static Elder createDefaultElder() {
+    return Elder(
+      name: "John Doe",
+      age: 75,
+      dateOfBirth: DateTime(1949, 5, 15),
+      gender: "Male",
+      roomNumber: "101",
+      bloodType: "O+",
+      allergies: ["Penicillin", "Peanuts"],
+      medications: ["Lisinopril", "Metformin"],
+      medicalConditions: ["Hypertension", "Type 2 Diabetes"],
+      emergencyContact: EmergencyContact(
+        name: "Jane Doe",
+        relationship: "Daughter",
+        phone: "(555) 123-4567"
+      ),
+      profileImagePath: null,
+      recentActivities: [
+        RecentActivity(
+          type: "Medication",
+          description: "Took morning medication",
+          timestamp: DateTime.now().subtract(const Duration(hours: 3)),
+          performedBy: "Nurse Smith"
+        )
+      ]
+    );
+  }
 
   @override
   State<ElderCareProfilePage> createState() => _ElderCareProfilePageState();
@@ -76,7 +105,8 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
   @override
   void initState() {
     super.initState();
-    _elder = widget.elder;
+    // Use provided elder or create default one if none provided
+    _elder = widget.elder ?? ElderCareProfilePage.createDefaultElder();
   }
 
   @override
@@ -417,3 +447,4 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
     );
   }
 }
+
