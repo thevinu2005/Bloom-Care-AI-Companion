@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 
 class EmergencyPage2 extends StatefulWidget {
@@ -114,193 +113,121 @@ class _EmergencyPage2State extends State<EmergencyPage2> {
     }
   }
 
-  // Add this method to get location permission and current position
-  Future<Position?> _getCurrentLocation() async {
+  // Update the _sendEmergencyNotification method to remove location-related code
+  Future<void> _sendEmergencyNotification() async {
+    if (_isSendingNotification || _notificationSent) return;
+    
+    setState(() {
+      _isSendingNotification = true;
+    });
+    
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        return null;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          return null;
-        }
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
       }
       
-      if (permission == LocationPermission.deniedForever) {
-        return null;
+      // Get user data
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) {
+        throw Exception('User document not found');
       }
-
-      return await Geolocator.getCurrentPosition();
+      
+      final userData = userDoc.data()!;
+      final String assignedCaregiverId = userData['assignedCaregiver'] as String? ?? '';
+      
+      if (assignedCaregiverId.isEmpty) {
+        _showNoAssignedCaregiverDialog();
+        setState(() {
+          _isSendingNotification = false;
+        });
+        return;
+      }
+      
+      // Get current time formatted
+      final now = DateTime.now();
+      final formattedTime = DateFormat('h:mm a').format(now);
+      
+      // Get caregiver data
+      final caregiverDoc = await _firestore.collection('users').doc(assignedCaregiverId).get();
+      final caregiverName = caregiverDoc.data()?['name'] ?? 'Your Caregiver';
+      
+      // Create emergency notification with real-time details
+      final notificationData = {
+        'type': 'emergency',
+        'emergencyType': 'Emergency Button Press', // Actual emergency type
+        'title': 'Emergency Alert',
+        'message': '${userData['name']} has triggered an emergency alert and needs immediate assistance!',
+        'elderId': user.uid,
+        'elderName': userData['name'] ?? 'Elder',
+        'elderImage': userData['profileImage'] ?? 'assets/default_avatar.png',
+        'elderStatus': 'Immediate Attention Required',
+        'timestamp': FieldValue.serverTimestamp(), // Use Firestore server timestamp
+        'formattedTime': formattedTime, // Backup formatted time
+        'isRead': false,
+        'color': const Color(0xFFF8D7DA).value,
+        'textColor': const Color(0xFF721C24).value,
+        'icon': 'warning_amber_rounded',
+        'iconColor': Colors.red.value,
+        'priority': 'high',
+      };
+      
+      // Send notification to caregiver
+      await _firestore
+          .collection('users')
+          .doc(assignedCaregiverId)
+          .collection('notifications')
+          .add(notificationData);
+      
+      // Also record this emergency in the user's history
+      final historyData = {
+        'timestamp': FieldValue.serverTimestamp(),
+        'formattedTime': formattedTime,
+        'status': 'active',
+        'caregiverId': assignedCaregiverId,
+        'caregiverName': caregiverName,
+        'emergencyType': 'Emergency Button Press',
+        'resolved': false,
+      };
+      
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('emergency_history')
+          .add(historyData);
+      
+      // Update user's emergency status
+      final updateData = {
+        'emergency': true,
+        'lastEmergencyTime': FieldValue.serverTimestamp(),
+      };
+      
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .update(updateData);
+      
+      setState(() {
+        _isSendingNotification = false;
+        _notificationSent = true;
+      });
+      
+      _showNotificationSentDialog(caregiverName);
+      
     } catch (e) {
-      print('Error getting location: $e');
-      return null;
-    }
-  }
-
-  // Update the _sendEmergencyNotification method to include proper details
-Future<void> _sendEmergencyNotification() async {
-  if (_isSendingNotification || _notificationSent) return;
-  
-  setState(() {
-    _isSendingNotification = true;
-  });
-  
-  try {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception('User not logged in');
-    }
-    
-    // Get user data
-    final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    if (!userDoc.exists) {
-      throw Exception('User document not found');
-    }
-    
-    final userData = userDoc.data()!;
-    final String assignedCaregiverId = userData['assignedCaregiver'] as String? ?? '';
-    
-    if (assignedCaregiverId.isEmpty) {
-      _showNoAssignedCaregiverDialog();
+      print('Error sending emergency notification: $e');
       setState(() {
         _isSendingNotification = false;
       });
-      return;
+      
+      ScaffoldMessenger.of((context)).showSnackBar(
+        SnackBar(
+          content: Text('Error sending emergency notification: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-    
-    // Get current location with room detection
-    Position? position;
-    String room = 'Unknown location';
-    double? latitude;
-    double? longitude;
-    
-    try {
-      position = await _getCurrentLocation();
-      if (position != null) {
-        latitude = position.latitude;
-        longitude = position.longitude;
-        // You would implement room detection logic here
-        room = 'Living Room'; // For demonstration, hardcoded to Living Room
-      }
-    } catch (e) {
-      print('Error getting location: $e');
-    }
-    
-    // Get current time formatted
-    final now = DateTime.now();
-    final formattedTime = DateFormat('h:mm a').format(now);
-    
-    // Get caregiver data
-    final caregiverDoc = await _firestore.collection('users').doc(assignedCaregiverId).get();
-    final caregiverName = caregiverDoc.data()?['name'] ?? 'Your Caregiver';
-    
-    // Create emergency notification with real-time details
-    final notificationData = {
-      'type': 'emergency',
-      'emergencyType': 'Emergency Button Press', // Actual emergency type
-      'title': 'Emergency Alert',
-      'message': '${userData['name']} has triggered an emergency alert and needs immediate assistance!',
-      'elderId': user.uid,
-      'elderName': userData['name'] ?? 'Elder',
-      'elderImage': userData['profileImage'] ?? 'assets/default_avatar.png',
-      'elderStatus': 'Immediate Attention Required',
-      'timestamp': FieldValue.serverTimestamp(), // Use Firestore server timestamp
-      'formattedTime': formattedTime, // Backup formatted time
-      'isRead': false,
-      'color': const Color(0xFFF8D7DA).value,
-      'textColor': const Color(0xFF721C24).value,
-      'icon': 'warning_amber_rounded',
-      'iconColor': Colors.red.value,
-      'priority': 'high',
-    };
-    
-    // Only add location if we have valid coordinates
-    if (latitude != null && longitude != null) {
-      notificationData['location'] = {
-        'latitude': latitude,
-        'longitude': longitude,
-        'room': room,
-      };
-    }
-    
-    // Send notification to caregiver
-    await _firestore
-        .collection('users')
-        .doc(assignedCaregiverId)
-        .collection('notifications')
-        .add(notificationData);
-    
-    // Also record this emergency in the user's history
-    final historyData = {
-      'timestamp': FieldValue.serverTimestamp(),
-      'formattedTime': formattedTime,
-      'status': 'active',
-      'caregiverId': assignedCaregiverId,
-      'caregiverName': caregiverName,
-      'emergencyType': 'Emergency Button Press',
-      'resolved': false,
-    };
-    
-    // Only add location if we have valid coordinates
-    if (latitude != null && longitude != null) {
-      historyData['location'] = {
-        'latitude': latitude,
-        'longitude': longitude,
-        'room': room,
-      };
-    }
-    
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('emergency_history')
-        .add(historyData);
-    
-    // Update user's emergency status
-    final updateData = {
-      'emergency': true,
-      'lastEmergencyTime': FieldValue.serverTimestamp(),
-    };
-    
-    // Only add location if we have valid coordinates
-    if (latitude != null && longitude != null) {
-      updateData['lastEmergencyLocation'] = {
-        'latitude': latitude,
-        'longitude': longitude,
-        'room': room,
-      };
-    }
-    
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .update(updateData);
-    
-    setState(() {
-      _isSendingNotification = false;
-      _notificationSent = true;
-    });
-    
-    _showNotificationSentDialog(caregiverName);
-    
-  } catch (e) {
-    print('Error sending emergency notification: $e');
-    setState(() {
-      _isSendingNotification = false;
-    });
-    
-    ScaffoldMessenger.of((context)).showSnackBar(
-      SnackBar(
-        content: Text('Error sending emergency notification: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
   }
-}
   
   void _showNoAssignedCaregiverDialog() {
     showDialog(
@@ -369,12 +296,6 @@ Future<void> _sendEmergencyNotification() async {
                           icon: const Icon(Icons.arrow_back, color: Colors.white),
                           onPressed: () {
                             Navigator.pop(context);
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.home, color: Colors.white),
-                          onPressed: () {
-                            Navigator.of(context).pushReplacementNamed('/');
                           },
                         ),
                       ],

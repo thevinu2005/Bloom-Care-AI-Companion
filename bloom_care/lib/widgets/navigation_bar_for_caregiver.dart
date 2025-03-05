@@ -22,7 +22,7 @@ class BottomNav_for_caregivers extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(context, 0, 'assest/icons/home_icon.png', '/home'),
+          _buildNavItem(context, 0, 'assest/icons/home_icon.png', '/caregiverhome'),
           _buildNavItem(context, 1, 'assest/icons/notification_icon.png', '/caregivernotification'),
           _buildNavItem(context, 2, 'assest/icons/profile_icon.png', '/profile_caregiver'),
         ],

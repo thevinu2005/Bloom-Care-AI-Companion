@@ -3,6 +3,8 @@ import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 // Define a simple Elder model class
 class Elder {
@@ -19,6 +21,8 @@ class Elder {
   EmergencyContact emergencyContact;
   String? profileImagePath;
   List<RecentActivity> recentActivities;
+  String? caregiverName;
+  String? caregiverId;
 
   Elder({
     required this.id,
@@ -34,6 +38,8 @@ class Elder {
     required this.emergencyContact,
     this.profileImagePath,
     this.recentActivities = const [],
+    this.caregiverName,
+    this.caregiverId,
   });
 
   // Create Elder from Firestore document
@@ -81,6 +87,8 @@ class Elder {
       emergencyContact: contact,
       profileImagePath: data['profileImagePath'],
       recentActivities: [], // We'll load activities separately if needed
+      caregiverName: data['caregiverName'],
+      caregiverId: data['assignedCaregiver'],
     );
   }
   
@@ -231,7 +239,7 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
             children: [
               const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Error loading profile',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -318,7 +326,7 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
                   const SizedBox(height: 16),
                   _buildMedicalInfoCard(),
                   const SizedBox(height: 16),
-                  _buildEmergencyContactCard(),
+                  _buildCaregiverCard(),
                   const SizedBox(height: 80),
                 ],
               ),
@@ -399,8 +407,8 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
     );
   }
 
-  // Emergency contact card
-  Widget _buildEmergencyContactCard() {
+  // Caregiver card (replacing emergency contact)
+  Widget _buildCaregiverCard() {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -411,43 +419,228 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
           children: [
             const Row(
               children: [
-                Icon(Icons.emergency, color: Color(0xFF6B84DC)),
+                Icon(Icons.health_and_safety, color: Color(0xFF6B84DC)),
                 SizedBox(width: 8),
                 Text(
-                  'Emergency Contact',
+                  'Your Caregiver',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const Divider(),
-            const SizedBox(height: 8),
-            _infoRow('Name', _elder!.emergencyContact.name),
-            _infoRow('Relationship', _elder!.emergencyContact.relationship),
-            _infoRow('Phone', _elder!.emergencyContact.phone),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton.icon(
-                  icon: const Icon(Icons.phone),
-                  label: const Text('Call'),
-                  onPressed: () {
-                    _showMessage('Calling ${_elder!.emergencyContact.name}...');
-                  },
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  icon: const Icon(Icons.message),
-                  label: const Text('Message'),
-                  onPressed: () {
-                    _showMessage('Messaging ${_elder!.emergencyContact.name}...');
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
+            const SizedBox(height: 16),
+          
+            // Check if caregiver is assigned
+            if (_elder!.caregiverName != null && _elder!.caregiverName!.isNotEmpty)
+              FutureBuilder<DocumentSnapshot>(
+                future: _elder!.caregiverId != null 
+                    ? _firestore.collection('users').doc(_elder!.caregiverId).get() 
+                    : null,
+                builder: (context, snapshot) {
+                  // Default values
+                  String caregiverName = _elder!.caregiverName ?? 'Your Caregiver';
+                  String? caregiverPhone;
+                
+                  // If we have caregiver data
+                  if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
+                    final caregiverData = snapshot.data!.data() as Map<String, dynamic>?;
+                    if (caregiverData != null) {
+                      caregiverPhone = caregiverData['phone'] as String?;
+                    }
+                  }
+                
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: const Color(0xFFE6F0FF),
+                            radius: 30,
+                            child: Text(
+                              caregiverName.isNotEmpty 
+                                  ? caregiverName[0].toUpperCase() 
+                                  : 'C',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF6B84DC),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  caregiverName,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Text(
+                                  'Your assigned caregiver',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                if (caregiverPhone != null && caregiverPhone.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      'Phone: $caregiverPhone',
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildContactButton(
+                            icon: Icons.phone,
+                            label: 'Call',
+                            onPressed: () {
+                              if (caregiverPhone != null && caregiverPhone.isNotEmpty) {
+                                _makePhoneCall(caregiverPhone);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('No phone number available for this caregiver'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          _buildContactButton(
+                            icon: Icons.emergency,
+                            label: 'Emergency',
+                            color: Colors.red,
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/emergency2');
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              )
+            else
+              Column(
+                children: [
+                  const Center(
+                    child: Icon(
+                      Icons.person_off,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Center(
+                    child: Text(
+                      'No caregiver assigned yet',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/add_caregiver');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6B84DC),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text('Add Caregiver'),
+                    ),
+                  ),
+                ],
+              ),
+        ],
       ),
+    ),
+  );
+}
+
+// Add this method to make actual phone calls
+Future<void> _makePhoneCall(String phoneNumber) async {
+  final Uri launchUri = Uri(
+    scheme: 'tel',
+    path: phoneNumber,
+  );
+  try {
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not launch phone call to $phoneNumber'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error making phone call: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+  Widget _buildContactButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    Color color = const Color(0xFF6B84DC),
+  }) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 24,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -492,9 +685,6 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
     final allergiesController = TextEditingController(text: _elder!.allergies.join(', '));
     final medicationsController = TextEditingController(text: _elder!.medications.join(', '));
     final conditionsController = TextEditingController(text: _elder!.medicalConditions.join(', '));
-    final emergencyNameController = TextEditingController(text: _elder!.emergencyContact.name);
-    final emergencyRelationController = TextEditingController(text: _elder!.emergencyContact.relationship);
-    final emergencyPhoneController = TextEditingController(text: _elder!.emergencyContact.phone);
     
     // Show edit profile dialog
     showDialog(
@@ -533,24 +723,6 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
                 decoration: const InputDecoration(labelText: 'Medical Conditions (comma separated)'),
                 controller: conditionsController,
               ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const Text(
-                'Emergency Contact',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Name'),
-                controller: emergencyNameController,
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Relationship'),
-                controller: emergencyRelationController,
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Phone'),
-                controller: emergencyPhoneController,
-              ),
             ],
           ),
         ),
@@ -577,13 +749,11 @@ class _ElderCareProfilePageState extends State<ElderCareProfilePage> {
                 allergies: allergiesController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
                 medications: medicationsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
                 medicalConditions: conditionsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
-                emergencyContact: EmergencyContact(
-                  name: emergencyNameController.text,
-                  relationship: emergencyRelationController.text,
-                  phone: emergencyPhoneController.text,
-                ),
+                emergencyContact: _elder!.emergencyContact, // Keep the same emergency contact
                 profileImagePath: _elder!.profileImagePath,
                 recentActivities: _elder!.recentActivities,
+                caregiverName: _elder!.caregiverName,
+                caregiverId: _elder!.caregiverId,
               );
               
               // Update in Firebase

@@ -47,8 +47,9 @@ dependencies:
   cloud_firestore: ^5.6.4
   url_launcher: ^6.1.10
   intl: ^0.18.0
-  geolocator: ^10.1.0
-  maps_launcher: ^2.2.0
+  shared_preferences: ^2.2.1
+  flutter_local_notifications: ^17.2.1
+  timezone: ^0.9.2
 
 dev_dependencies:
   flutter_test:
