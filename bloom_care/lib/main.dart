@@ -10,8 +10,7 @@ import 'package:bloom_care/screens/profile/elder_care_profile.dart';
 import 'package:bloom_care/screens/notification/elder_notification.dart';
 import 'package:bloom_care/screens/notification/caregiver_notification.dart';
 import 'package:bloom_care/screens/home/caregviver_home.dart';
-// import 'package:bloom_care/screens/notifications/notifications_page.dart';
-// import 'package:bloom_care/screens/profile/caregiver_profile.dart';
+
 
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
@@ -46,8 +45,7 @@ class MyApp extends StatelessWidget {
         '/eldernotification': (context) => const NotificationPage(),
         '/caregivernotification': (context) => const CaregiverNotificationPage(),
         '/caregiverhome': (context) => const CaregiverHomePage(),
-        // '/notifications': (context) => const NotificationsPage(),
-        // '/profile': (context) => const ProfilePage(),
+        
       },
       navigatorObservers: [routeObserver],
     );

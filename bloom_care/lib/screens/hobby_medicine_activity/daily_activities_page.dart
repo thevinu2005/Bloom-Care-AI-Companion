@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:bloom_care/widgets/navigation_bar.dart'; // Import the BottomNav widget
+import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class DailyActivitiesPage extends StatefulWidget {
   const DailyActivitiesPage({super.key});
@@ -54,37 +57,237 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
 
   // Sample data for upcoming appointments
   List<Appointment> appointments = [
-    Appointment(
-      date: "Mar 15, 2023",
-      time: "10:00 AM",
-      title: "Doctor Checkup",
-      location: "City Hospital",
-      isConfirmed: true,
-    ),
-    Appointment(
-      date: "Mar 18, 2023",
-      time: "2:30 PM",
-      title: "Physical Therapy",
-      location: "Wellness Center",
-      isConfirmed: true,
-    ),
-    Appointment(
-      date: "Mar 22, 2023",
-      time: "11:15 AM",
-      title: "Dental Appointment",
-      location: "Smile Dental Clinic",
-      isConfirmed: false,
-    ),
+    
   ];
 
-  // Save changes to local storage (this is a placeholder)
-  void _saveChanges() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Daily activities saved successfully!'),
-        backgroundColor: Color(0xFF8FA2E6),
-      ),
-    );
+  // Firebase instances
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Save changes to local storage and Firestore
+  Future<void> _saveChanges() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Save meal plans to Firestore
+      for (var meal in mealPlans) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('meal_plans')
+            .add({
+          'time': meal.time,
+          'mealType': meal.mealType,
+          'description': meal.description,
+          'isCompleted': meal.isCompleted,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Save hobby times to Firestore
+      for (var hobby in hobbyTimes) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('hobby_times')
+            .add({
+          'time': hobby.time,
+          'activity': hobby.activity,
+          'duration': hobby.duration,
+          'isCompleted': hobby.isCompleted,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Save appointments to Firestore
+      for (var appointment in appointments) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('appointments')
+            .add({
+          'date': appointment.date,
+          'time': appointment.time,
+          'title': appointment.title,
+          'location': appointment.location,
+          'isConfirmed': appointment.isConfirmed,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Daily activities saved successfully!'),
+          backgroundColor: Color(0xFF8FA2E6),
+        ),
+      );
+    } catch (e) {
+      print('Error saving activities: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving activities: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Send notification to user
+  Future<void> _sendNotification(String type, String title, String message) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Determine notification color and icon based on type
+      Color notificationColor;
+      Color textColor;
+      String iconString;
+
+      switch (type) {
+        case 'meal':
+          notificationColor = const Color(0xFFD1ECF1);
+          textColor = const Color(0xFF0C5460);
+          iconString = 'restaurant';
+          break;
+        case 'hobby':
+          notificationColor = const Color(0xFFFFF3CD);
+          textColor = const Color(0xFF856404);
+          iconString = 'sports_esports';
+          break;
+        case 'appointment':
+          notificationColor = const Color(0xFFE2D9F3);
+          textColor = const Color(0xFF6A359C);
+          iconString = 'event';
+          break;
+        default:
+          notificationColor = const Color(0xFFD1ECF1);
+          textColor = const Color(0xFF0C5460);
+          iconString = 'notifications';
+      }
+
+      // 1. Create notification for the elder
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('notifications')
+          .add({
+        'type': type,
+        'title': title,
+        'message': message,
+        'color': notificationColor.value,
+        'textColor': textColor.value,
+        'icon': iconString,
+        'iconColor': const Color(0xFF6B84DC).value,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+
+      // 2. Send notification to assigned caregiver if available
+      await _notifyCaregiverAboutActivity(type, title, message);
+
+      print('Notification sent: $title - $message');
+    } catch (e) {
+      print('Error sending notification: $e');
+    }
+  }
+
+  // Add a new method to notify the caregiver about elder activities
+  Future<void> _notifyCaregiverAboutActivity(String type, String title, String message) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Get elder's data
+      final elderDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!elderDoc.exists) {
+        return;
+      }
+
+      final elderData = elderDoc.data()!;
+      final elderName = elderData['name'] ?? 'Your elder';
+      final assignedCaregiverId = elderData['assignedCaregiver'] as String?;
+
+      // If no caregiver is assigned, exit
+      if (assignedCaregiverId == null || assignedCaregiverId.isEmpty) {
+        print('No caregiver assigned for this elder');
+        return;
+      }
+
+      // Customize notification details for caregiver
+      Color notificationColor;
+      Color textColor;
+      String iconString;
+      String typeLabel;
+
+      // Determine style and label based on activity type
+      switch (type) {
+        case 'meal':
+          notificationColor = const Color(0xFFD1ECF1);
+          textColor = const Color(0xFF0C5460);
+          iconString = 'restaurant';
+          typeLabel = 'meal';
+          break;
+        case 'hobby':
+          notificationColor = const Color(0xFFFFF3CD);
+          textColor = const Color(0xFF856404);
+          iconString = 'sports_esports';
+          typeLabel = 'hobby';
+          break;
+        case 'appointment':
+          notificationColor = const Color(0xFFE2D9F3);
+          textColor = const Color(0xFF6A359C);
+          iconString = 'event';
+          typeLabel = 'appointment';
+          break;
+        default:
+          notificationColor = const Color(0xFFD1ECF1);
+          textColor = const Color(0xFF0C5460);
+          iconString = 'notifications';
+          typeLabel = 'activity';
+      }
+
+      // Extract the activity details from the elder's message
+      String activityDetail = message;
+      if (message.startsWith('You have')) {
+        activityDetail = message.replaceFirst('You have', '');
+      }
+
+      // Create caregiver message
+      final caregiverMessage = '$elderName has$activityDetail';
+      final caregiverTitle = 'Elder $typeLabel Update';
+
+      // Send notification to caregiver
+      await _firestore
+          .collection('users')
+          .doc(assignedCaregiverId)
+          .collection('notifications')
+          .add({
+        'type': 'elder_activity',
+        'elderName': elderName,
+        'elderId': user.uid,
+        'activityType': type,
+        'title': caregiverTitle,
+        'message': caregiverMessage,
+        'color': notificationColor.value,
+        'textColor': textColor.value,
+        'icon': iconString,
+        'iconColor': const Color(0xFF6B84DC).value,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'priority': 'normal',
+      });
+
+      print('Caregiver notification sent about $elderName\'s $typeLabel');
+    } catch (e) {
+      print('Error sending notification to caregiver: $e');
+    }
   }
 
   @override
@@ -192,14 +395,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                   child: InkWell(
                     onTap: () {
                       // Add functionality to add new meal
-                      setState(() {
-                        mealPlans.add(MealPlan(
-                          time: "Time",
-                          mealType: "Meal Type",
-                          description: "Description",
-                          isCompleted: false,
-                        ));
-                      });
+                      _addNewMeal();
                     },
                     child: Container(
                       padding: const EdgeInsets.all(10),
@@ -239,14 +435,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                   child: InkWell(
                     onTap: () {
                       // Add functionality to add new hobby time
-                      setState(() {
-                        hobbyTimes.add(HobbyTime(
-                          time: "Time",
-                          activity: "Activity",
-                          duration: "Duration",
-                          isCompleted: false,
-                        ));
-                      });
+                      _addNewHobby();
                     },
                     child: Container(
                       padding: const EdgeInsets.all(10),
@@ -286,15 +475,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                   child: InkWell(
                     onTap: () {
                       // Add functionality to add new appointment
-                      setState(() {
-                        appointments.add(Appointment(
-                          date: "Date",
-                          time: "Time",
-                          title: "Appointment Title",
-                          location: "Location",
-                          isConfirmed: false,
-                        ));
-                      });
+                      _addNewAppointment();
                     },
                     child: Container(
                       padding: const EdgeInsets.all(10),
@@ -325,6 +506,341 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
           ),
         ],
       ),
+    );
+  }
+
+  // Add new meal with notification
+  void _addNewMeal() {
+    TextEditingController timeController = TextEditingController(text: "");
+    TextEditingController typeController = TextEditingController(text: "");
+    TextEditingController descController = TextEditingController(text: "");
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Add New Meal'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: timeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Time',
+                    prefixIcon: Icon(Icons.access_time),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: typeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Meal Type',
+                    prefixIcon: Icon(Icons.restaurant),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    prefixIcon: Icon(Icons.description),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Add'),
+              onPressed: () async {
+                if (timeController.text.isNotEmpty && 
+                    typeController.text.isNotEmpty && 
+                    descController.text.isNotEmpty) {
+                  
+                  final newMeal = MealPlan(
+                    time: timeController.text,
+                    mealType: typeController.text,
+                    description: descController.text,
+                    isCompleted: false,
+                  );
+                  
+                  setState(() {
+                    mealPlans.add(newMeal);
+                  });
+                  
+                  // Send notification to elder
+                  await _sendNotification(
+                    'meal',
+                    'New Meal Added',
+                    'You have added ${typeController.text} at ${timeController.text}',
+                  );
+                  
+                  // Show success message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${typeController.text} added to your meal plan'),
+                        backgroundColor: const Color(0xFF8FA2E6),
+                      ),
+                    );
+                  }
+                  
+                  Navigator.of(context).pop();
+                } else {
+                  // Show error for empty fields
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please fill in all fields'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Add new hobby with notification
+  void _addNewHobby() {
+    TextEditingController timeController = TextEditingController(text: "");
+    TextEditingController activityController = TextEditingController(text: "");
+    TextEditingController durationController = TextEditingController(text: "");
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Add New Hobby Time'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: timeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Time',
+                    prefixIcon: Icon(Icons.access_time),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: activityController,
+                  decoration: const InputDecoration(
+                    labelText: 'Activity',
+                    prefixIcon: Icon(Icons.sports_esports),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: durationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Duration',
+                    prefixIcon: Icon(Icons.timer),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Add'),
+              onPressed: () async {
+                if (timeController.text.isNotEmpty && 
+                    activityController.text.isNotEmpty && 
+                    durationController.text.isNotEmpty) {
+                  
+                  final newHobby = HobbyTime(
+                    time: timeController.text,
+                    activity: activityController.text,
+                    duration: durationController.text,
+                    isCompleted: false,
+                  );
+                  
+                  setState(() {
+                    hobbyTimes.add(newHobby);
+                  });
+                  
+                  // Send notification
+                  await _sendNotification(
+                    'hobby',
+                    'New Hobby Added',
+                    'You have added ${activityController.text} at ${timeController.text} for ${durationController.text}',
+                  );
+                  
+                  // Show success message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${activityController.text} added to your hobby schedule'),
+                        backgroundColor: const Color(0xFF8FA2E6),
+                      ),
+                    );
+                  }
+                  
+                  Navigator.of(context).pop();
+                } else {
+                  // Show error for empty fields
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please fill in all fields'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Add new appointment with notification
+  void _addNewAppointment() {
+    TextEditingController dateController = TextEditingController(text: "");
+    TextEditingController timeController = TextEditingController(text: "");
+    TextEditingController titleController = TextEditingController(text: "");
+    TextEditingController locationController = TextEditingController(text: "");
+    bool isConfirmed = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Add New Appointment'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: dateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Date',
+                        prefixIcon: Icon(Icons.calendar_today),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: timeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Time',
+                        prefixIcon: Icon(Icons.access_time),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Title',
+                        prefixIcon: Icon(Icons.title),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: locationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Location',
+                        prefixIcon: Icon(Icons.location_on),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      children: [
+                        const Text('Confirmed:'),
+                        const SizedBox(width: 10),
+                        Switch(
+                          value: isConfirmed,
+                          activeColor: const Color(0xFF8FA2E6),
+                          onChanged: (value) {
+                            setState(() {
+                              isConfirmed = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: const Text('Add'),
+                  onPressed: () async {
+                    if (dateController.text.isNotEmpty && 
+                        timeController.text.isNotEmpty && 
+                        titleController.text.isNotEmpty && 
+                        locationController.text.isNotEmpty) {
+                      
+                      final newAppointment = Appointment(
+                        date: dateController.text,
+                        time: timeController.text,
+                        title: titleController.text,
+                        location: locationController.text,
+                        isConfirmed: isConfirmed,
+                      );
+                      
+                      this.setState(() {
+                        appointments.add(newAppointment);
+                      });
+                      
+                      // Send notification
+                      await _sendNotification(
+                        'appointment',
+                        'New Appointment Added',
+                        'You have added ${titleController.text} on ${dateController.text} at ${timeController.text}',
+                      );
+                      
+                      // Show success message
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${titleController.text} added to your appointments'),
+                            backgroundColor: const Color(0xFF8FA2E6),
+                          ),
+                        );
+                      }
+                      
+                      Navigator.of(context).pop();
+                    } else {
+                      // Show error for empty fields
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please fill in all fields'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -770,12 +1286,20 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
             ),
             TextButton(
               child: const Text('Save'),
-              onPressed: () {
+              onPressed: () async {
                 setState(() {
                   meal.time = timeController.text;
                   meal.mealType = typeController.text;
                   meal.description = descController.text;
                 });
+                
+                // Send notification for edit
+                await _sendNotification(
+                  'meal',
+                  'Meal Plan Updated',
+                  'You have updated ${typeController.text} at ${timeController.text}',
+                );
+                
                 Navigator.of(context).pop();
               },
             ),
@@ -835,12 +1359,20 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
             ),
             TextButton(
               child: const Text('Save'),
-              onPressed: () {
+              onPressed: () async {
                 setState(() {
                   hobby.time = timeController.text;
                   hobby.activity = activityController.text;
                   hobby.duration = durationController.text;
                 });
+                
+                // Send notification for edit
+                await _sendNotification(
+                  'hobby',
+                  'Hobby Time Updated',
+                  'You have updated ${activityController.text} at ${timeController.text}',
+                );
+                
                 Navigator.of(context).pop();
               },
             ),
@@ -928,7 +1460,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                 ),
                 TextButton(
                   child: const Text('Save'),
-                  onPressed: () {
+                  onPressed: () async {
                     this.setState(() {
                       appointment.date = dateController.text;
                       appointment.time = timeController.text;
@@ -936,6 +1468,14 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                       appointment.location = locationController.text;
                       appointment.isConfirmed = isConfirmed;
                     });
+                    
+                    // Send notification for edit
+                    await _sendNotification(
+                      'appointment',
+                      'Appointment Updated',
+                      'You have updated ${titleController.text} on ${dateController.text}',
+                    );
+                    
                     Navigator.of(context).pop();
                   },
                 ),
@@ -994,3 +1534,4 @@ class Appointment {
     required this.isConfirmed,
   });
 }
+
