@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import 'dart:math' show min;
 
 class HobbiesPage extends StatefulWidget {
   const HobbiesPage({super.key});
@@ -16,6 +19,8 @@ class _HobbiesPageState extends State<HobbiesPage> {
   List<Map<String, dynamic>> hobbies = [];
   List<String> userFavorites = [];
   String userName = 'User';
+  String _lastResetDate = '';
+  bool _needsReset = false;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -23,7 +28,107 @@ class _HobbiesPageState extends State<HobbiesPage> {
   @override
   void initState() {
     super.initState();
+    _checkIfResetNeeded();
     _loadUserData();
+  }
+
+  // Add this method to check if hobbies need to be reset
+  Future<void> _checkIfResetNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    // Get the last reset date from shared preferences
+    _lastResetDate = prefs.getString('lastHobbyResetDate') ?? '';
+
+    // If last reset date is not today, we need to reset
+    if (_lastResetDate != today) {
+      setState(() {
+        _needsReset = true;
+      });
+    }
+  }
+
+  // Add this method to reset daily hobby status
+  Future<void> _resetDailyHobbies() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Get today's date
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      // Batch update for Firestore
+      final batch = _firestore.batch();
+
+      // Get all hobbies
+      final hobbiesSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('hobbies')
+          .get();
+
+      // For each hobby, reset the daily status
+      for (var doc in hobbiesSnapshot.docs) {
+        final hobbyRef = _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('hobbies')
+            .doc(doc.id);
+
+        // Reset daily completion status but keep the total activity count
+        batch.update(hobbyRef, {
+          'dailyCompleted': false,
+        });
+      }
+
+      // Commit the batch
+      await batch.commit();
+
+      // Update local state
+      for (var hobby in hobbies) {
+        hobby['dailyCompleted'] = false;
+      }
+
+      // Save the reset date
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('lastHobbyResetDate', today);
+
+      setState(() {
+        _lastResetDate = today;
+        _needsReset = false;
+        _isLoading = false;
+      });
+
+      // Show confirmation
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hobbies reset for a new day!'),
+            backgroundColor: Color(0xFF6B84DC),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error resetting hobbies: $e');
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error resetting hobbies: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // Load user data including hobbies and favorites
@@ -45,13 +150,13 @@ class _HobbiesPageState extends State<HobbiesPage> {
       }
 
       final userData = userDoc.data()!;
-      
+
       // Get user's name
       final name = userData['name'] as String? ?? 'User';
-      
+
       // Get user's hobbies from profile
       final userHobbies = List<String>.from(userData['hobbies'] ?? []);
-      
+
       // Get user's favorites from profile
       final favorites = List<String>.from(userData['favorites'] ?? []);
 
@@ -67,14 +172,16 @@ class _HobbiesPageState extends State<HobbiesPage> {
       // If user has hobby activity data, use it
       if (hobbiesCollection.docs.isNotEmpty) {
         for (var doc in hobbiesCollection.docs) {
+          final data = doc.data();
           hobbyList.add({
             'id': doc.id,
-            'name': doc.data()['name'] ?? 'Unknown',
-            'frequency': doc.data()['frequency'] ?? 1,
-            'lastDone': doc.data()['lastDone'] ?? DateTime.now().toString().substring(0, 10),
-            'mood': doc.data()['mood'] ?? 'Relaxed',
-            'category': doc.data()['category'] ?? 'Indoor',
-            'activityCount': doc.data()['activityCount'] ?? 0,
+            'name': data['name'] ?? 'Unknown',
+            'frequency': data['frequency'] ?? 1,
+            'lastDone': data['lastDone'] ?? DateTime.now().toString().substring(0, 10),
+            'mood': data['mood'] ?? 'Relaxed',
+            'category': data['category'] ?? 'Indoor',
+            'activityCount': data['activityCount'] ?? 0,
+            'dailyCompleted': data['dailyCompleted'] ?? false,
           });
         }
       } else {
@@ -106,6 +213,7 @@ class _HobbiesPageState extends State<HobbiesPage> {
             'mood': mood,
             'category': category,
             'activityCount': 0,
+            'dailyCompleted': false,
           });
         }
       }
@@ -116,18 +224,25 @@ class _HobbiesPageState extends State<HobbiesPage> {
         userFavorites = favorites;
         _isLoading = false;
       });
+
+      // Check if we need to reset hobbies for a new day
+      if (_needsReset) {
+        _resetDailyHobbies();
+      }
     } catch (e) {
       print('Error loading user data: $e');
       setState(() {
         _isLoading = false;
       });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading hobbies: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading hobbies: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -200,198 +315,274 @@ class _HobbiesPageState extends State<HobbiesPage> {
       setState(() {
         _isLoading = false;
       });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding hobby: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding hobby: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   // Log an activity for a hobby
-Future<void> logActivity(Map<String, dynamic> hobby) async {
-  final today = DateTime.now().toString().substring(0, 10);
-  final newActivityCount = (hobby['activityCount'] as int) + 1;
+  Future<void> logActivity(Map<String, dynamic> hobby) async {
+    final today = DateTime.now().toString().substring(0, 10);
+    final newActivityCount = (hobby['activityCount'] as int) + 1;
 
-  try {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception('User not logged in');
-    }
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
 
-    // First check if the hobby exists in Firestore
-    DocumentReference hobbyRef;
-    if (hobby['id'] == null || hobby['id'] is int) {
-      // This is a new hobby that hasn't been saved to Firestore yet
-      hobbyRef = _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('hobbies')
-          .doc(); // Create new document with auto-generated ID
+      // First check if the hobby exists in Firestore
+      DocumentReference hobbyRef;
+      if (hobby['id'] == null || hobby['id'] is int) {
+        // This is a new hobby that hasn't been saved to Firestore yet
+        hobbyRef = _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('hobbies')
+            .doc(); // Create new document with auto-generated ID
 
-      // Create the hobby document first
-      await hobbyRef.set({
-        'name': hobby['name'],
-        'frequency': hobby['frequency'],
-        'lastDone': today,
-        'mood': hobby['mood'],
-        'category': hobby['category'],
-        'activityCount': 1, // Start with 1 since this is the first activity
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // Update local state with new ID
-      setState(() {
-        hobby['id'] = hobbyRef.id;
-        hobby['lastDone'] = today;
-        hobby['activityCount'] = 1;
-      });
-    } else {
-      // Existing hobby - update it
-      hobbyRef = _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('hobbies')
-          .doc(hobby['id'].toString());
-
-      // Verify the document exists before updating
-      final docSnapshot = await hobbyRef.get();
-      if (!docSnapshot.exists) {
-        // If document doesn't exist, create it
+        // Create the hobby document first
         await hobbyRef.set({
           'name': hobby['name'],
           'frequency': hobby['frequency'],
           'lastDone': today,
           'mood': hobby['mood'],
           'category': hobby['category'],
-          'activityCount': 1,
+          'activityCount': 1, // Start with 1 since this is the first activity
+          'dailyCompleted': true, // Mark as completed for today
           'createdAt': FieldValue.serverTimestamp(),
         });
-      } else {
-        // Update existing document
-        await hobbyRef.update({
-          'lastDone': today,
-          'activityCount': newActivityCount,
+
+        // Update local state with new ID
+        setState(() {
+          hobby['id'] = hobbyRef.id;
+          hobby['lastDone'] = today;
+          hobby['activityCount'] = 1;
+          hobby['dailyCompleted'] = true;
         });
+      } else {
+        // Existing hobby - update it
+        hobbyRef = _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('hobbies')
+            .doc(hobby['id'].toString());
+
+        // Verify the document exists before updating
+        final docSnapshot = await hobbyRef.get();
+        if (!docSnapshot.exists) {
+          // If document doesn't exist, create it
+          await hobbyRef.set({
+            'name': hobby['name'],
+            'frequency': hobby['frequency'],
+            'lastDone': today,
+            'mood': hobby['mood'],
+            'category': hobby['category'],
+            'activityCount': 1,
+            'dailyCompleted': true,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          // Update existing document
+          await hobbyRef.update({
+            'lastDone': today,
+            'activityCount': newActivityCount,
+            'dailyCompleted': true,
+          });
+        }
+
+        // Update local state
+        setState(() {
+          hobby['lastDone'] = today;
+          hobby['activityCount'] = newActivityCount;
+          hobby['dailyCompleted'] = true;
+        });
+      }
+
+      // Show confirmation
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${hobby['name']} logged for today!'),
+            backgroundColor: const Color(0xFF6B84DC),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error logging activity: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error logging activity: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Add the setReminder function to create notifications
+  Future<void> setReminder(Map<String, dynamic> hobby) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Get the current time
+      final now = DateTime.now();
+      
+      // Create a notification for tomorrow
+      final tomorrow = DateTime(now.year, now.month, now.day + 1, 9, 0); // 9:00 AM tomorrow
+      
+      // Determine icon and colors based on hobby category
+      Color notificationColor;
+      Color textColor;
+      String iconString;
+      
+      switch((hobby['category'] as String).toLowerCase()) {
+        case 'outdoor':
+          notificationColor = const Color(0xFFFFF3CD);
+          textColor = const Color(0xFF856404);
+          iconString = 'directions_walk';
+          break;
+        case 'creative':
+          notificationColor = const Color(0xFFE2D9F3);
+          textColor = const Color(0xFF6A359C);
+          iconString = 'palette';
+          break;
+        default: // Indoor
+          notificationColor = const Color(0xFFD1ECF1);
+          textColor = const Color(0xFF0C5460);
+          iconString = 'home';
+      }
+      
+      // Create notification data
+      final notification = {
+        'type': 'activity',
+        'title': 'Hobby Reminder',
+        'message': 'Time for ${hobby['name']}!\nThis activity helps you feel ${hobby['mood']}.',
+        'color': notificationColor.value,
+        'textColor': textColor.value,
+        'icon': iconString,
+        'iconColor': const Color(0xFF6B84DC).value,
+        'timestamp': Timestamp.fromDate(tomorrow),
+        'formattedTime': '${tomorrow.hour}:${tomorrow.minute.toString().padLeft(2, '0')}',
+        'frequency': 'daily',
+        'isRead': false,
+        'hobbyId': hobby['id'],
+      };
+      
+      // Add notification to user's notifications collection
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('notifications')
+          .add(notification);
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reminder set for ${hobby['name']} tomorrow at 9:00 AM'),
+            backgroundColor: const Color(0xFF6B84DC),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error setting reminder: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error setting reminder: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Add this function to delete a hobby
+  Future<void> deleteHobby(Map<String, dynamic> hobby) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Check if the hobby exists in Firestore (has a valid ID)
+      if (hobby['id'] != null && hobby['id'] is String) {
+        // Delete from Firestore
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('hobbies')
+            .doc(hobby['id'].toString())
+            .delete();
       }
 
       // Update local state
       setState(() {
-        hobby['lastDone'] = today;
-        hobby['activityCount'] = newActivityCount;
+        hobbies.removeWhere((h) => h['id'] == hobby['id']);
       });
-    }
 
-    // Show confirmation
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${hobby['name']} logged for today!'),
-          backgroundColor: const Color(0xFF6B84DC),
-        ),
-      );
-    }
-  } catch (e) {
-    print('Error logging activity: $e');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error logging activity: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Show confirmation
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${hobby['name']} removed from your hobbies'),
+            backgroundColor: Colors.grey[700],
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error deleting hobby: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing hobby: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
-}
 
-// Add the setReminder function to create notifications
-Future<void> setReminder(Map<String, dynamic> hobby) async {
-  try {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception('User not logged in');
-    }
-
-    // Get the current time
-    final now = DateTime.now();
-    
-    // Create a notification for tomorrow
-    final tomorrow = DateTime(now.year, now.month, now.day + 1, 9, 0); // 9:00 AM tomorrow
-    
-    // Determine icon and colors based on hobby category
-    Color notificationColor;
-    Color textColor;
-    IconData icon;
-    
-    switch(hobby['category'].toString().toLowerCase()) {
-      case 'outdoor':
-        notificationColor = const Color(0xFFFFF3CD);
-        textColor = const Color(0xFF856404);
-        icon = Icons.directions_walk;
-        break;
-      case 'creative':
-        notificationColor = const Color(0xFFE2D9F3);
-        textColor = const Color(0xFF6A359C);
-        icon = Icons.palette;
-        break;
-      default: // Indoor
-        notificationColor = const Color(0xFFD1ECF1);
-        textColor = const Color(0xFF0C5460);
-        icon = Icons.home;
-    }
-    
-    // Create notification data
-    final notification = {
-      'type': 'activity',
-      'title': 'Hobby Reminder',
-      'message': 'Time for ${hobby['name']}!\nThis activity helps you feel ${hobby['mood']}.',
-      'color': notificationColor.value,
-      'textColor': textColor.value,
-      'icon': _getIconString(icon),
-      'iconColor': const Color(0xFF6B84DC).value,
-      'timestamp': Timestamp.fromDate(tomorrow),
-      'formattedTime': '${tomorrow.hour}:${tomorrow.minute.toString().padLeft(2, '0')}',
-      'frequency': 'daily',
-      'isRead': false,
-      'hobbyId': hobby['id'],
-    };
-    
-    // Add notification to user's notifications collection
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('notifications')
-        .add(notification);
-    
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reminder set for ${hobby['name']} tomorrow at 9:00 AM'),
-        backgroundColor: const Color(0xFF6B84DC),
-      ),
-    );
-  } catch (e) {
-    print('Error setting reminder: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error setting reminder: $e'),
-        backgroundColor: Colors.red,
-      ),
+  // Add this function to show a confirmation dialog before deleting
+  void _showDeleteConfirmation(Map<String, dynamic> hobby) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Remove ${hobby['name']}?'),
+          content: const Text('Are you sure you want to remove this hobby from your list? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                deleteHobby(hobby);
+                Navigator.pop(context);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Remove'),
+            ),
+          ],
+        );
+      },
     );
   }
-}
-
-// Helper function to convert IconData to string for Firestore
-String _getIconString(IconData icon) {
-  if (icon == Icons.directions_walk) return 'directions_walk';
-  if (icon == Icons.palette) return 'palette';
-  if (icon == Icons.home) return 'home';
-  if (icon == Icons.medical_services_outlined) return 'medical_services_outlined';
-  if (icon == Icons.mood_bad) return 'mood_bad';
-  return 'notifications';
-}
 
   // Show add hobby dialog
   void _showAddHobbyDialog() {
@@ -529,6 +720,7 @@ String _getIconString(IconData icon) {
                       'mood': selectedMood,
                       'category': selectedCategory,
                       'activityCount': 0,
+                      'dailyCompleted': false,
                     };
 
                     // Add hobby and close dialog
@@ -594,6 +786,7 @@ String _getIconString(IconData icon) {
                               'mood': 'Happy',
                               'category': 'Indoor',
                               'activityCount': 0,
+                              'dailyCompleted': false,
                             };
 
                             // Add hobby
@@ -655,6 +848,12 @@ String _getIconString(IconData icon) {
           ),
         ),
         actions: [
+          if (_needsReset)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: _resetDailyHobbies,
+              tooltip: 'Reset for new day',
+            ),
           IconButton(
             icon: const Icon(Icons.favorite, color: Colors.white),
             onPressed: _showFavoritesDialog,
@@ -901,7 +1100,10 @@ String _getIconString(IconData icon) {
     );
   }
 
+  // Update the _buildHobbyCard function to include a delete option
   Widget _buildHobbyCard(Map<String, dynamic> hobby) {
+    final bool isDailyCompleted = hobby['dailyCompleted'] ?? false;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -915,6 +1117,9 @@ String _getIconString(IconData icon) {
             offset: const Offset(0, 2),
           ),
         ],
+        border: isDailyCompleted 
+            ? Border.all(color: const Color(0xFF6B84DC), width: 2) 
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -923,30 +1128,61 @@ String _getIconString(IconData icon) {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  hobby['name'] as String,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4A5578),
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    Text(
+                      hobby['name'] as String,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4A5578),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (isDailyCompleted)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 8.0),
+                        child: Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 18,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECF1FD),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  hobby['category'] as String,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B84DC),
-                    fontWeight: FontWeight.w500,
+              Row(
+                children: [
+                  // Add delete button
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
+                    onPressed: () => _showDeleteConfirmation(hobby),
+                    tooltip: 'Remove hobby',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    splashRadius: 20,
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECF1FD),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      hobby['category'] as String,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B84DC),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -978,6 +1214,14 @@ String _getIconString(IconData icon) {
                           color: Color(0xFF6B84DC),
                         ),
                       ),
+                      TextSpan(
+                        text: isDailyCompleted ? ' • Completed today' : '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.normal,
+                          color: Colors.green,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -989,11 +1233,19 @@ String _getIconString(IconData icon) {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               TextButton.icon(
-                icon: const Icon(Icons.check_circle_outline, size: 16),
-                label: const Text('Log activity'),
-                onPressed: () => logActivity(hobby),
+                icon: const Icon(
+                  Icons.check_circle_outline, 
+                  size: 16,
+                  color: Color(0xFF6B84DC),
+                ),
+                label: Text(
+                  isDailyCompleted ? 'Already logged' : 'Log activity',
+                  style: TextStyle(
+                    color: isDailyCompleted ? Colors.grey : const Color(0xFF6B84DC),
+                  ),
+                ),
+                onPressed: isDailyCompleted ? null : () => logActivity(hobby),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF6B84DC),
                   padding: EdgeInsets.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   visualDensity: VisualDensity.compact,
