@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'notification_detail.dart';
 import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
+import 'dart:async';
 
 class CaregiverNotificationPage extends StatefulWidget {
   const CaregiverNotificationPage({Key? key}) : super(key: key);
@@ -24,55 +25,48 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
   
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  StreamSubscription<QuerySnapshot>? _notificationsSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _setupNotificationsStream();
+  }
+  
+  @override
+  void dispose() {
+    _notificationsSubscription?.cancel();
+    super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  void _setupNotificationsStream() {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    
     try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('User not logged in');
-      }
-
-      // Load assigned elders
-      final assignedEldersQuery = await _firestore
-          .collection('users')
-          .where('assignedCaregiver', isEqualTo: user.uid)
-          .where('userType', isEqualTo: 'elder')
-          .get();
-
-      final List<Map<String, dynamic>> elders = [];
-      
-      for (var elderDoc in assignedEldersQuery.docs) {
-        final elderData = elderDoc.data();
-        elders.add({
-          'id': elderDoc.id,
-          'name': elderData['name'] ?? 'Unknown',
-          'imageUrl': elderData['profileImage'] ?? 'assets/elder1.jpg',
-          'status': 'Normal', // Default status
-        });
-      }
-
-      // Load notifications
-      final notificationsQuery = await _firestore
+      _notificationsSubscription = _firestore
           .collection('users')
           .doc(user.uid)
           .collection('notifications')
           .orderBy('timestamp', descending: true)
-          .get();
-
+          .snapshots()
+          .listen((snapshot) {
+            _processNotifications(snapshot);
+          }, onError: (error) {
+            print('Error in notifications stream: $error');
+          });
+    } catch (e) {
+      print('Error setting up notifications stream: $e');
+    }
+  }
+  
+  void _processNotifications(QuerySnapshot snapshot) {
+    try {
       final List<Map<String, dynamic>> notifications = [];
       
-      for (var notificationDoc in notificationsQuery.docs) {
-        final notificationData = notificationDoc.data();
+      for (var notificationDoc in snapshot.docs) {
+        final notificationData = notificationDoc.data() as Map<String, dynamic>;
         
         // Convert Firestore timestamp to DateTime
         final timestamp = notificationData['timestamp'] as Timestamp?;
@@ -133,11 +127,51 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
         });
       }
 
+      if (mounted) {
+        setState(() {
+          _notifications = notifications;
+          _isLoading = false;
+          _allRead = notifications.every((notification) => notification['isRead'] == true);
+        });
+      }
+    } catch (e) {
+      print('Error processing notifications: $e');
+    }
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Load assigned elders
+      final assignedEldersQuery = await _firestore
+          .collection('users')
+          .where('assignedCaregiver', isEqualTo: user.uid)
+          .where('userType', isEqualTo: 'elder')
+          .get();
+
+      final List<Map<String, dynamic>> elders = [];
+      
+      for (var elderDoc in assignedEldersQuery.docs) {
+        final elderData = elderDoc.data();
+        elders.add({
+          'id': elderDoc.id,
+          'name': elderData['name'] ?? 'Unknown',
+          'imageUrl': elderData['profileImage'] ?? 'assets/elder1.jpg',
+          'status': 'Normal', // Default status
+        });
+      }
+
       setState(() {
         _elders = elders;
-        _notifications = notifications;
         _isLoading = false;
-        _allRead = notifications.every((notification) => notification['isRead'] == true);
       });
     } catch (e) {
       print('Error loading data: $e');
@@ -560,7 +594,7 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
                     ],
                   ),
                 ),
-                if (notification['isRead'] && !isPending)
+                if (!notification['isRead'] && !isPending)
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
@@ -568,8 +602,8 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
+                      Icons.circle,
+                      color: Colors.blue,
                       size: 20,
                     ),
                   ),
@@ -712,7 +746,7 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
                 ),
               ),
               const SizedBox(width: 8),
-              if (notification['isRead'])
+              if (!notification['isRead'])
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -720,8 +754,8 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
+                    Icons.circle,
+                    color: Colors.blue,
                     size: 20,
                   ),
                 ),
@@ -738,7 +772,7 @@ class _CaregiverNotificationPageState extends State<CaregiverNotificationPage> {
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: const AssetImage('assets/background.jpg'),
+            image: const AssetImage('assest/images/notification page background.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               Colors.white.withOpacity(0.3),
