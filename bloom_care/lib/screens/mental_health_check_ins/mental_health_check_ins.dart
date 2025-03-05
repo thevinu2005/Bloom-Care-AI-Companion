@@ -32,8 +32,8 @@ class MentalHealthStartPage extends StatelessWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Color.fromARGB(204, 22, 57, 214), // Light blue with opacity
-                            Color(0xCC5B73CE), // Darker blue with opacity
+                            Color.fromARGB(255, 163, 118, 241), // Light purple
+                            Color(0xCC5B73CE), // Darker blue-purple
                           ],
                         ),
                       ),
@@ -105,4 +105,5 @@ class MentalHealthStartPage extends StatelessWidget {
     );
   }
 }
+
 
