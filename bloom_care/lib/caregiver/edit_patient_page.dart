@@ -145,4 +145,64 @@ class _EditPatientPageState extends State<EditPatientPage> {
                   }
                   return null;
                 },
-              )
+              ),
+              const SizedBox(height: 16),
+              _buildGenderDropdown(),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _dateOfBirthController,
+                label: 'Date of Birth',
+                keyboardType: TextInputType.datetime,
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.calendar_today),
+                  onPressed: () async {
+                    final DateTime? picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(1900),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      _dateOfBirthController.text =
+                      "${picked.day}/${picked.month}/${picked.year}";
+                    }
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Medical Information Form
+              _buildSectionTitle('Medical Information'),
+              _buildTextFormField(
+                controller: _conditionController,
+                label: 'Primary Condition',
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _allergiesController,
+                label: 'Allergies',
+                maxLines: 3,
+                helperText: 'List all known allergies, separated by commas',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF5B6EC7),
+        ),
+      ),
+    );
+  }
