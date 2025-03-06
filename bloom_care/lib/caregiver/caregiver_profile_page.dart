@@ -298,3 +298,107 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    // Quick contact buttons (only in view mode)
+                    if (!_isEditing)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildContactButton(Icons.call, "Call"),
+                          const SizedBox(width: 16),
+                          _buildContactButton(Icons.message, "Message"),
+                          const SizedBox(width: 16),
+                          _buildContactButton(Icons.email, "Email"),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Personal Info Section
+              _buildSectionTitle("Personal Information"),
+              _buildInfoCard([
+                _buildInfoRow(Icons.phone, "Phone", caregiverData["phone"], controller: _phoneController),
+                _buildInfoRow(Icons.email, "Email", caregiverData["email"], controller: _emailController),
+                _buildInfoRow(Icons.location_on, "Address", caregiverData["address"], controller: _addressController),
+                _buildInfoRow(Icons.work, "Experience", caregiverData["experience"], controller: _experienceController),
+                _buildInfoRow(Icons.calendar_today, "Availability", caregiverData["availability"], controller: _availabilityController),
+              ]),
+
+              const SizedBox(height: 24),
+
+              // About Me Section
+              _buildSectionTitle("About Me"),
+              _isEditing
+                  ? Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _aboutController,
+                  maxLines: 5,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                    height: 1.5,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: "Write about yourself",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              )
+                  : _buildDetailCard(caregiverData["about"]),
+
+              const SizedBox(height: 24),
+
+              // Education & Certifications
+              _buildSectionTitle("Education & Certifications"),
+              _isEditing
+                  ? _buildEditableInfoCard([
+                _buildInfoRow(Icons.school, "Education", caregiverData["education"], controller: _educationController),
+                const SizedBox(height: 8),
+                _buildEditableListSection("Certifications", _certifications),
+              ])
+                  : _buildInfoCard([
+                _buildInfoRow(Icons.school, "Education", caregiverData["education"]),
+                const SizedBox(height: 8),
+                _buildListSection("Certifications", caregiverData["certifications"]),
+              ]),
+
+              const SizedBox(height: 24),
+
+              // Skills Section
+              _buildSectionTitle("Skills & Expertise"),
+              _isEditing
+                  ? _buildEditableSkillsGrid(_skills)
+                  : _buildSkillsGrid(caregiverData["skills"]),
+
+              const SizedBox(height: 24),
+
+              // Statistics Section
+              _buildSectionTitle("Care Statistics"),
+              _buildStatsCard(),
+
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: const BottomNav(currentIndex: 4), // Assuming profile is the last tab
+    );
+  
