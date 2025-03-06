@@ -93,3 +93,90 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
     _availabilityController.dispose();
     super.dispose();
   }
+
+  // Save changes to caregiverData
+  void _saveChanges() {
+    setState(() {
+      caregiverData["name"] = _nameController.text;
+      caregiverData["title"] = _titleController.text;
+      caregiverData["email"] = _emailController.text;
+      caregiverData["phone"] = _phoneController.text;
+      caregiverData["address"] = _addressController.text;
+      caregiverData["experience"] = _experienceController.text;
+      caregiverData["education"] = _educationController.text;
+      caregiverData["about"] = _aboutController.text;
+      caregiverData["availability"] = _availabilityController.text;
+      caregiverData["certifications"] = _certifications;
+      caregiverData["skills"] = _skills;
+
+      // Exit editing mode
+      _isEditing = false;
+    });
+
+    // Show a success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Profile updated successfully'),
+        backgroundColor: accentColor,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // Cancel editing and revert to original data
+  void _cancelEditing() {
+    setState(() {
+      // Reset controllers to original data
+      _nameController.text = caregiverData["name"];
+      _titleController.text = caregiverData["title"];
+      _emailController.text = caregiverData["email"];
+      _phoneController.text = caregiverData["phone"];
+      _addressController.text = caregiverData["address"];
+      _experienceController.text = caregiverData["experience"];
+      _educationController.text = caregiverData["education"];
+      _aboutController.text = caregiverData["about"];
+      _availabilityController.text = caregiverData["availability"];
+
+      // Reset lists
+      _certifications = List<String>.from(caregiverData["certifications"]);
+      _skills = List<String>.from(caregiverData["skills"]);
+
+      // Exit editing mode
+      _isEditing = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        title: Text(
+          _isEditing ? "Edit Profile" : "My Profile",
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        leading: _isEditing
+            ? IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: _cancelEditing,
+        )
+            : null,
+        actions: [
+          if (_isEditing)
+            IconButton(
+              icon: const Icon(Icons.check, color: Colors.white),
+              onPressed: _saveChanges,
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.white),
+              onPressed: () {
+                setState(() {
+                  _isEditing = true;
+                });
+              },
+            ),
+        ],
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+      ),
