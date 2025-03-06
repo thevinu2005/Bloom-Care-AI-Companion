@@ -89,4 +89,70 @@ class _ProfessionalRemindersPageState extends State<ProfessionalRemindersPage> {
                   borderSide: BorderSide(color: primaryColor, width: 2),
                 ),
               ),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _descriptionController,
+              decoration: InputDecoration(
+                labelText: 'Description',
+                labelStyle: TextStyle(color: primaryColor),
+                prefixIcon: Icon(Icons.description, color: primaryColor),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: primaryColor, width: 2),
+                ),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 15),
+            DropdownButtonFormField<String>(
+              value: _selectedCategory,
+              decoration: InputDecoration(
+                labelText: 'Category',
+                labelStyle: TextStyle(color: primaryColor),
+                prefixIcon: Icon(Icons.category, color: primaryColor),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              items: _categories.map((category) {
+                return DropdownMenuItem(
+                  value: category,
+                  child: Text(category),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedCategory = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 15),
+            Row(
+              children: [
+                Expanded(
+                  child: ListTile(
+                    title: Text(
+                      'Date: ${DateFormat('MMM dd, yyyy').format(_selectedDate)}',
+                      style: TextStyle(color: primaryColor),
+                    ),
+                    trailing: Icon(Icons.calendar_today, color: primaryColor),
+                    onTap: _pickDate,
+                  ),
+                ),
+                Expanded(
+                  child: ListTile(
+                    title: Text(
+                      'Time: ${_selectedTime.format(context)}',
+                      style: TextStyle(color: primaryColor),
+                    ),
+                    trailing: Icon(Icons.access_time, color: primaryColor),
+                    onTap: _pickTime,
+                  ),
+                ),
+              ],
             )
