@@ -155,4 +155,99 @@ class _ProfessionalRemindersPageState extends State<ProfessionalRemindersPage> {
                   ),
                 ),
               ],
-            )
+            ),
+            const SizedBox(height: 15),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 15),
+              ),
+              onPressed: () {
+                final newReminder = ProfessionalReminder(
+                  title: _titleController.text,
+                  description: _descriptionController.text,
+                  date: _selectedDate,
+                  time: _selectedTime,
+                  category: _selectedCategory,
+                );
+                setState(() {
+                  _reminders.add(newReminder);
+                });
+                _titleController.clear();
+                _descriptionController.clear();
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Create Reminder',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _pickDate() async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: ColorScheme.light(
+            primary: primaryColor,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (pickedDate != null) {
+      setState(() {
+        _selectedDate = pickedDate;
+      });
+    }
+  }
+
+  void _pickTime() async {
+    TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: ColorScheme.light(
+            primary: primaryColor,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (pickedTime != null) {
+      setState(() {
+        _selectedTime = pickedTime;
+      });
+    }
+  }
+
+  void _deleteReminder(int index) {
+    setState(() {
+      _reminders.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Group reminders by category
+    Map<String, List<ProfessionalReminder>> groupedReminders = {};
+    for (var reminder in _reminders) {
+      groupedReminders.putIfAbsent(reminder.category, () => []).add(reminder);
+    }
