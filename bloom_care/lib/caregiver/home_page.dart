@@ -124,3 +124,76 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
                   color: Colors.grey[600],
                 ),
               ),
+              const SizedBox(height: 24),
+
+              // Stats Overview
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatItem("3", "Patients Today"),
+                    _buildStatItem("7", "Tasks"),
+                    _buildDailyProgress(0.6),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Upcoming Tasks Section
+              const Text(
+                "Upcoming Tasks",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...upcomingTasks.map((task) => _buildTaskCard(task)),
+
+              const SizedBox(height: 24),
+
+              // Patients Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Your Patients",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 180,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: patients.length,
+                  itemBuilder: (context, index) {
+                    return _buildPatientCard(patients[index]);
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+
+
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: const BottomNav(currentIndex: 0),
+    );
+  }
+
+ 
