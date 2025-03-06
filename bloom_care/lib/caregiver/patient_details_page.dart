@@ -196,4 +196,54 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                       ),
                     );
                   },
+                ),
+                _buildQuickActionButton(
+                  icon: Icons.event_note,
+                  label: 'Reminders',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfessionalRemindersPage(
+                          patientName: _patient['name'],
+                          initialReminders: _patient['reminders'] ?? [],
+                        ),
+                      ),
+                    );
+                  },
                 )
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      children: [
+        IconButton(
+          icon: Icon(
+            icon,
+            color: const Color(0xFF5B6EC7),
+            size: 36,
+          ),
+          onPressed: onTap,
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.black54,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
