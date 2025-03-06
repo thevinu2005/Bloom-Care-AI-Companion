@@ -180,3 +180,59 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
         ],
         systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Profile header with image and basic info
+              Center(
+                child: Column(
+                  children: [
+                    // Profile image
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: primaryColor,
+                          width: 3.0,
+                        ),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Center(
+                            child: Icon(
+                              Icons.person,
+                              size: 70,
+                              color: accentColor,
+                            ),
+                          ),
+                          if (_isEditing)
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: CircleAvatar(
+                                backgroundColor: accentColor,
+                                radius: 18,
+                                child: IconButton(
+                                  icon: Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                                  onPressed: () {
+                                    // Photo upload functionality would go here
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Photo upload functionality would be implemented here'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
