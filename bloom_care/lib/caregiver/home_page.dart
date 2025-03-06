@@ -274,4 +274,112 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
     );
   }
 
- 
+  Widget _buildStatItem(String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: accentColor,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDailyProgress(double progress) {
+    return Container(
+      width: 90,
+      height: 90,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(
+          color: accentColor,
+          width: 8.0 * progress,
+          strokeAlign: BorderSide.strokeAlignOutside,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          "${(progress * 100).toInt()}%",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: accentColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskCard(Map<String, dynamic> task) {
+    Color cardColor = task["isUrgent"] ? Colors.red[50]! : primaryColor.withOpacity(0.1);
+    Color iconColor = task["isUrgent"] ? Colors.red : accentColor;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: cardColor,
+          child: Icon(
+            Icons.assignment,
+            color: iconColor,
+          ),
+        ),
+        title: Text(
+          task["title"],
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text("${task["patient"]} • ${task["time"]}"),
+        trailing: IconButton(
+          icon: Icon(Icons.check_circle_outline, color: accentColor),
+          onPressed: () {
+            // Mark task as completed
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(IconData icon, String label, Color color) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 28,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
