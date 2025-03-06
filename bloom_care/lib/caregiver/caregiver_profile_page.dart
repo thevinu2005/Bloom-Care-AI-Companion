@@ -560,4 +560,91 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
                     ),
                     isDense: true,
                   ),
-                
+                )
+                    : Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListSection(String label, List<dynamic> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...items.map((item) => Padding(
+          padding: const EdgeInsets.only(bottom: 6, left: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: accentColor,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        )).toList(),
+      ],
+    );
+  }
+
+  Widget _buildEditableListSection(String label, List<String> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[800],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.add_circle, color: accentColor),
+              onPressed: () {
+                _showAddItemDialog(
+                  title: "Add $label",
+                  onAdd: (value) {
+                    setState(() {
+                      _certifications.add(value);
+                    });
+                  },
+                );
+              },
+              constraints: const BoxConstraints(),
+              padding: EdgeInsets.zero,
+            ),
+          ],
+        ),
