@@ -63,3 +63,64 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
       "isUrgent": false,
     },
   ];
+
+  // Updated color scheme based on the image
+  final Color primaryColor = const Color(0xFF8B9CE0); // Light purple/blue
+  final Color backgroundColor = const Color(0xFFE6ECFF); // Very light blue
+  final Color accentColor = const Color(0xFF5B6EC7); // Deeper purple/blue
+
+  @override
+  Widget build(BuildContext context) {
+    // Get current date
+    final now = DateTime.now();
+    final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
+    final formattedDate = dateFormat.format(now);
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        title: const Text(
+          "Caregiver Dashboard",
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () {
+              // Handle notifications
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_circle, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CaregiverProfilePage()),
+              );
+            },
+          ),
+        ],
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Greeting and Date
+              Text(
+                "Hello, $caregiverName!",
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                formattedDate,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
