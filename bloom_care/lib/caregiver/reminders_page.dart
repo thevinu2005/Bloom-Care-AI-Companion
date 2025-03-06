@@ -353,3 +353,66 @@ class _ProfessionalRemindersPageState extends State<ProfessionalRemindersPage> {
                         ),
                       ],
                     ),
+                    trailing: IconButton(
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: Colors.red.withOpacity(0.7),
+                      ),
+                      onPressed: () => _deleteReminder(
+                          _reminders.indexOf(reminder)),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class ProfessionalReminder {
+  String title;
+  String description;
+  DateTime date;
+  TimeOfDay time;
+  String category;
+
+  ProfessionalReminder({
+    required this.title,
+    required this.description,
+    required this.date,
+    required this.time,
+    this.category = 'General',
+  });
+
+  // Convert Reminder to Map for storage
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'description': description,
+      'date': date.toIso8601String(),
+      'time': '${time.hour}:${time.minute}',
+      'category': category,
+    };
+  }
+
+  // Create Reminder from Map
+  factory ProfessionalReminder.fromMap(Map<String, dynamic> map) {
+    return ProfessionalReminder(
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      date: map['date'] != null
+          ? DateTime.parse(map['date'])
+          : DateTime.now(),
+      time: map['time'] != null
+          ? TimeOfDay(
+          hour: int.parse(map['time'].split(':')[0]),
+          minute: int.parse(map['time'].split(':')[1])
+      )
+          : TimeOfDay.now(),
+      category: map['category'] ?? 'General',
+    );
+  }
+}
