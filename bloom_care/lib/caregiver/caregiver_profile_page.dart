@@ -869,3 +869,99 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
       ),
     );
   }
+
+  Widget _buildStatsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem("127", "Visits"),
+              _buildStatItem("18", "Patients"),
+              _buildStatItem("823", "Hours"),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildRatingIndicator("Patient Satisfaction", 4.8),
+              _buildRatingIndicator("Attendance Rate", 4.9),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: accentColor,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRatingIndicator(String label, double rating) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Text(
+              rating.toString(),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: accentColor,
+              ),
+            ),
+            const SizedBox(width: 4),
+            ...List.generate(5, (index) => Icon(
+              Icons.star,
+              size: 16,
+              color: index < rating.floor()
+                  ? accentColor
+                  : (index < rating ? accentColor : Colors.grey[300]),
+            )),
+          ],
+        ),
+      ],
+    );
+  }
+}
