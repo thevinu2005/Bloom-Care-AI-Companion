@@ -91,4 +91,58 @@ class _EditPatientPageState extends State<EditPatientPage> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: const Color(0xFF8B9CE0).withOpacity(0.2),
-                      )
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        size: 100,
+                        color: Color(0xFF5B6EC7),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF5B6EC7),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.camera_alt, color: Colors.white),
+                          onPressed: () {
+                            // TODO: Implement image picker
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Personal Information Form
+              _buildSectionTitle('Personal Information'),
+              _buildTextFormField(
+                controller: _nameController,
+                label: 'Full Name',
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter patient name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _ageController,
+                label: 'Age',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter patient age';
+                  }
+                  if (int.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              )
