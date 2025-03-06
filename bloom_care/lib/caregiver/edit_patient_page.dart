@@ -206,3 +206,52 @@ class _EditPatientPageState extends State<EditPatientPage> {
       ),
     );
   }
+
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String label,
+    int? maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    Widget? suffixIcon,
+    String? helperText,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        suffixIcon: suffixIcon,
+        helperText: helperText,
+      ),
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
+    );
+  }
+
+  Widget _buildGenderDropdown() {
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(
+        labelText: 'Gender',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      value: _selectedGender,
+      items: ['Male', 'Female', 'Other']
+          .map((gender) => DropdownMenuItem(
+        value: gender,
+        child: Text(gender),
+      ))
+          .toList(),
+      onChanged: (value) {
+        setState(() {
+          _selectedGender = value;
+        });
+      },
+    );
+  }
+}
