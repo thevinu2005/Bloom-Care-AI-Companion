@@ -758,4 +758,114 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                  )
+                  ),
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          skills.removeAt(idx);
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text("Add Skill"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                _showAddItemDialog(
+                  title: "Add Skill",
+                  onAdd: (value) {
+                    setState(() {
+                      skills.add(value);
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to show add item dialog
+  void _showAddItemDialog({required String title, required Function(String) onAdd}) {
+    final TextEditingController textController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: textController,
+            decoration: InputDecoration(hintText: "Enter $title"),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Cancel"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text("Add"),
+              onPressed: () {
+                if (textController.text.isNotEmpty) {
+                  onAdd(textController.text);
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSkillChip(String skill) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: primaryColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        skill,
+        style: TextStyle(
+          fontSize: 13,
+          color: accentColor,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
