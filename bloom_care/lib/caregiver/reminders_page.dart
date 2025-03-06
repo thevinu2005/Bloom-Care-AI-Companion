@@ -251,3 +251,105 @@ class _ProfessionalRemindersPageState extends State<ProfessionalRemindersPage> {
     for (var reminder in _reminders) {
       groupedReminders.putIfAbsent(reminder.category, () => []).add(reminder);
     }
+
+    return Scaffold(
+      backgroundColor: accentColor,
+      appBar: AppBar(
+        title: Text(
+          'Reminders: ${widget.patientName}',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: primaryColor,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.notifications_outlined),
+            onPressed: () {
+              // Notification action
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.person_outline),
+            onPressed: () {
+              // Profile action
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addReminder,
+        backgroundColor: primaryColor,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      body: _reminders.isEmpty
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.event_note,
+              size: 100,
+              color: primaryColor.withOpacity(0.3),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'No Reminders Yet',
+              style: TextStyle(
+                fontSize: 18,
+                color: primaryColor,
+              ),
+            ),
+          ],
+        ),
+      )
+          : ListView(
+        padding: const EdgeInsets.all(16),
+        children: groupedReminders.entries.map((entry) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  entry.key,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+              ...entry.value.map((reminder) {
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  color: Colors.white,
+                  child: ListTile(
+                    title: Text(
+                      reminder.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          reminder.description,
+                          style: TextStyle(color: secondaryTextColor),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          '${DateFormat('MMM dd, yyyy').format(reminder.date)} '
+                              'at ${reminder.time.format(context)}',
+                          style: TextStyle(
+                            color: primaryColor.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
