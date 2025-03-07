@@ -302,14 +302,46 @@ class _MedicinePageState extends State<MedicinePage> {
                     const SizedBox(height: 12),
 
                     // Recurring options
-                   
-  Widget _buildMedicineCard(Map<String, String> medicine, int index) {
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Repeat',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF6B84DC),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              _buildDayChip('Mon'),
+                              _buildDayChip('Tue'),
+                              _buildDayChip('Wed'),
+                              _buildDayChip('Thu'),
+                              _buildDayChip('Fri'),
+                              _buildDayChip('Sat'),
+                              _buildDayChip('Sun'),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+
+                  // Add Medicine Button - full width now
+                         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
