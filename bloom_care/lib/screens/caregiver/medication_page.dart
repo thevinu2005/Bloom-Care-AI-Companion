@@ -347,50 +347,56 @@ class _MedicinePageState extends State<MedicinePage> {
                     child: ElevatedButton.icon(
                       onPressed: _addMedicine,
                       style: ElevatedButton.styleFrom(
-  
-  Widget _buildMedicineCard(Map<String, String> medicine, int index) {
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFB3C1F0).withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.medication_outlined,
-                    color: Color(0xFF6B84DC),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        medicine['name']!,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                        backgroundColor: const Color(0xFF6B84DC),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      Text(
-                        'Dosage: ${medicine['dosage']}',
+                      icon: const Icon(Icons.add),
+                      label: const Text(
+                        'Add Medication',
                         style: TextStyle(
-                          color: Colors.grey.shade700,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Medicine List Title
+            const Text(
+              'Your Medications',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Medicine List
+            medicines.isEmpty
+                ? _emptyMedicationState()
+                : ListView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: medicines.length,
+              itemBuilder: (context, index) {
+                final medicine = medicines[index];
+                return _buildMedicineCard(medicine, index);
+              },
+            ),
+          ],
+        ),
+      ),
+  color: Colors.grey.shade700,
                           fontSize: 14,
                         ),
                       ),
