@@ -396,7 +396,109 @@ class _MedicinePageState extends State<MedicinePage> {
           ],
         ),
       ),
-  color: Colors.grey.shade700,
+      bottomNavigationBar: const BottomNav(currentIndex: -1),  // Changed from 1 to 0 to remove highlighting from the second icon
+    );
+  }
+
+  Widget _buildDayChip(String day) {
+    bool isSelected = false; // This would be connected to a state variable in a full implementation
+
+    return ChoiceChip(
+      label: Text(day),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        // Would update state in a full implementation
+      },
+      backgroundColor: Colors.white,
+      selectedColor: const Color(0xFF8FA2E6),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : const Color(0xFF6B84DC),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+  }
+
+  Widget _emptyMedicationState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.medical_services_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No medications added yet',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add your medications above to track them',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicineCard(Map<String, String> medicine, int index) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFB3C1F0).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.medication_outlined,
+                    color: Color(0xFF6B84DC),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        medicine['name']!,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        'Dosage: ${medicine['dosage']}',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
                           fontSize: 14,
                         ),
                       ),
