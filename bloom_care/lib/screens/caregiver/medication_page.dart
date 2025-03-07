@@ -341,7 +341,20 @@ class _MedicinePageState extends State<MedicinePage> {
                   const SizedBox(height: 16),
 
                   // Add Medicine Button - full width now
-                         side: BorderSide(color: Colors.grey.shade200),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _addMedicine,
+                      style: ElevatedButton.styleFrom(
+  
+  Widget _buildMedicineCard(Map<String, String> medicine, int index) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
