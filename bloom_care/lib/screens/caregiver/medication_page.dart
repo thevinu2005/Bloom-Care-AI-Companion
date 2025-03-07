@@ -77,117 +77,36 @@ class _MedicinePageState extends State<MedicinePage> {
     }
   }
 
-
-  Widget _buildMedicineCard(Map<String, String> medicine, int index) {
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFD7E0FA), // Match home page background
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF8FA2E6), // Match home page app bar
+        title: const Text(
+          'Medication',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Colors.white),
+        ),
+        elevation: 0,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFB3C1F0).withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
+            // Title section
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFB3C1F0), // Match home page container
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.lightBlueAccent.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 10,
                   ),
-                  child: const Icon(
-                    Icons.medication_outlined,
-                    color: Color(0xFF6B84DC),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        medicine['name']!,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        'Dosage: ${medicine['dosage']}',
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () => _removeMedicine(index),
-                  tooltip: 'Remove medication',
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Divider(color: Colors.grey.shade200),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 16,
-                      color: Color(0xFF6B84DC),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Time: ${medicine['time']}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.inventory_2_outlined,
-                      size: 16,
-                      color: Color(0xFF6B84DC),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Qty: ${medicine['quantity']}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            if (medicine['notes'] != null && medicine['notes']!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Notes: ${medicine['notes']}',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey.shade700,
-                ),
+                ],
               ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
+             }
