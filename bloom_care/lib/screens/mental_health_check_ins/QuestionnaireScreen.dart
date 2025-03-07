@@ -22,7 +22,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     "How would you rate your energy levels?",
   ];
 
-  int _currentQuestionIndex = 0; // Tracks which question is being shown
+  int _currentQuestionIndex = 0; // Tracks which question is displayed
 
   void _nextQuestion() {
     if (_formKey.currentState!.validate()) {
@@ -30,25 +30,37 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         setState(() {
           _currentQuestionIndex++; // Move to next question
         });
-      } else {
-        // All questions answered, show final message
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Submission Successful"),
-            content: const Text("Thank you for your responses!"),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.pushNamed(context, '/results');
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        );
       }
+    }
+  }
+
+  void _previousQuestion() {
+    if (_currentQuestionIndex > 0) {
+      setState(() {
+        _currentQuestionIndex--; // Move back to previous question
+      });
+    }
+  }
+
+  void _submitAnswers() {
+    if (_formKey.currentState!.validate()) {
+      // Show success message when all questions are answered
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Submission Successful"),
+          content: const Text("Thank you for your responses!"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushNamed(context, '/results');
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -95,13 +107,25 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _nextQuestion, // Moves to the next question
-                  child: Text(_currentQuestionIndex < questions.length - 1
-                      ? 'Next'
-                      : 'Submit'), // Changes text for last question
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (_currentQuestionIndex > 0)
+                    ElevatedButton(
+                      onPressed: _previousQuestion,
+                      child: const Text('Back'),
+                    ),
+                  if (_currentQuestionIndex < questions.length - 1)
+                    ElevatedButton(
+                      onPressed: _nextQuestion,
+                      child: const Text('Next'),
+                    ),
+                  if (_currentQuestionIndex == questions.length - 1)
+                    ElevatedButton(
+                      onPressed: _submitAnswers,
+                      child: const Text('Submit'),
+                    ),
+                ],
               ),
             ],
           ),
@@ -118,3 +142,5 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     super.dispose();
   }
 }
+
+
