@@ -81,39 +81,32 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        Navigator.pushNamed(context, '/results');
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Submission Successful"),
+                            content: const Text("Thank you for your responses!"),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  Navigator.pushNamed(context, '/results');
+                                },
+                                child: const Text("OK"),
+                              ),
+                            ],
+                          ),
+                        );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 50,
-                        vertical: 15,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: const Text(
-                      'Submit',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    child: const Text('Submit'),
                   ),
                 ),
-                const SizedBox(height: 100),
               ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    for (var controller in controllers) {
-      controller.dispose();
-    }
-    super.dispose();
   }
 }
