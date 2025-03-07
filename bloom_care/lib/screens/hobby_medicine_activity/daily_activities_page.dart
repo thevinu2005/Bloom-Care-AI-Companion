@@ -573,7 +573,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
       body: _isLoading 
           ? const Center(child: CircularProgressIndicator())
           : _buildDailyActivitiesContent(),
-      bottomNavigationBar: const BottomNav(currentIndex: 0), // Added BottomNav with currentIndex 0
+      bottomNavigationBar: const BottomNav(currentIndex: -1), // Added BottomNav with currentIndex 0
     );
   }
 

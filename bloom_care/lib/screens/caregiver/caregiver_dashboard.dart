@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:bloom_care/screens/caregiver/medication_page.dart';
 
 class ElderDetailsPage extends StatefulWidget {
   final Map<String, dynamic> elder;
@@ -310,7 +311,10 @@ class _ElderDetailsPageState extends State<ElderDetailsPage> {
                           }).toList(),
                     actionText: 'View All Medications',
                     onActionPressed: () {
-                      // Navigate to medications page
+                      print('Navigating to medications page for elder: ${_elder['name']} (ID: ${_elder['id']})');
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => MedicinePage(elderId: _elder['id'])),
+                      );
                     },
                   ),
 
@@ -469,7 +473,11 @@ class _ElderDetailsPageState extends State<ElderDetailsPage> {
                   icon: Icons.medication,
                   label: 'Medications',
                   onTap: () {
-                    // Navigate to medications page
+                    print('Navigating to medications page for elder: ${_elder['name']} (ID: ${_elder['id']})');
+                    // Make sure we're passing the elder ID correctly
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => MedicinePage(elderId: _elder['id'])),
+                    );
                   },
                 ),
                 _buildQuickActionButton(
