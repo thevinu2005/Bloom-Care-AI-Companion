@@ -405,7 +405,7 @@ class _ElderActivityFeedState extends State<ElderActivityFeed> {
                 ),
               ],
             ),
-      bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: 1),
+      bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: -1),
     );
   }
   

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
+import 'package:intl/intl.dart';
+import 'dart:async';
+import 'package:bloom_care/screens/caregiver/caregiver_dashboard.dart';
 
 class CaregiverHomePage extends StatefulWidget {
   const CaregiverHomePage({super.key});
@@ -11,13 +14,19 @@ class CaregiverHomePage extends StatefulWidget {
 }
 
 class _CaregiverHomePageState extends State<CaregiverHomePage> {
-  int _selectedIndex = 0;
   bool _isLoading = true;
-  String _caregiverName = '';
+  String _caregiverName = 'Caregiver';
+  String _caregiverEmail = '';
+  String _caregiverProfileImage = 'assets/default_avatar.png';
   List<Map<String, dynamic>> _assignedElders = [];
+  int _unreadNotifications = 0;
   
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  
+  // Stream subscriptions for real-time updates
+  final List<StreamSubscription> _subscriptions = [];
+  final Map<String, StreamSubscription> _moodSubscriptions = {};
 
   @override
   void initState() {
@@ -25,7 +34,26 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
     _loadCaregiverData();
   }
 
+  @override
+  void dispose() {
+    // Cancel all stream subscriptions when widget is disposed
+    for (var subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    
+    // Cancel all mood subscriptions
+    _moodSubscriptions.forEach((_, subscription) {
+      subscription.cancel();
+    });
+    
+    super.dispose();
+  }
+
   Future<void> _loadCaregiverData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
     try {
       final user = _auth.currentUser;
       if (user != null) {
@@ -36,172 +64,505 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
             .get();
 
         if (caregiverDoc.exists) {
+          final caregiverData = caregiverDoc.data() ?? {};
+          
           setState(() {
-            _caregiverName = caregiverDoc.data()?['name'] ?? 'User';
+            _caregiverName = caregiverData['name'] ?? 'Caregiver';
+            _caregiverEmail = caregiverData['email'] ?? user.email ?? '';
+            _caregiverProfileImage = caregiverData['profileImage'] ?? 'assets/default_avatar.png';
           });
 
-          // Get assigned elders
-          final assignedEldersQuery = await _firestore
+          // Set up real-time listener for unread notifications
+          final notificationsStream = _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('notifications')
+              .where('isRead', isEqualTo: false)
+              .snapshots();
+              
+          final notificationSubscription = notificationsStream.listen((snapshot) {
+            setState(() {
+              _unreadNotifications = snapshot.docs.length;
+            });
+          });
+          
+          _subscriptions.add(notificationSubscription);
+
+          // Set up real-time listener for assigned elders
+          final assignedEldersStream = _firestore
               .collection('users')
               .where('assignedCaregiver', isEqualTo: user.uid)
               .where('userType', isEqualTo: 'elder')
-              .get();
-
-          final List<Map<String, dynamic>> elders = [];
-          
-          for (var elderDoc in assignedEldersQuery.docs) {
-            // Get the latest emotion for this elder
-            final latestEmotionQuery = await _firestore
-                .collection('users')
-                .doc(elderDoc.id)
-                .collection('emotions')
-                .orderBy('timestamp', descending: true)
-                .limit(1)
-                .get();
-
-            final elderData = elderDoc.data();
-            final dateOfBirth = elderData['dateOfBirth'] as String?;
-            int age = 0;
+              .snapshots();
+              
+          final eldersSubscription = assignedEldersStream.listen((snapshot) async {
+            final List<Map<String, dynamic>> elders = [];
             
-            if (dateOfBirth != null) {
-              final parts = dateOfBirth.split('/');
-              if (parts.length == 3) {
-                final birthDate = DateTime(
-                  int.parse(parts[2]), // year
-                  int.parse(parts[1]), // month
-                  int.parse(parts[0]), // day
-                );
-                age = DateTime.now().difference(birthDate).inDays ~/ 365;
+            // Cancel existing mood subscriptions for elders that might have been removed
+            final currentElderIds = snapshot.docs.map((doc) => doc.id).toSet();
+            _moodSubscriptions.keys
+                .where((id) => !currentElderIds.contains(id))
+                .toList()
+                .forEach((id) {
+                  _moodSubscriptions[id]?.cancel();
+                  _moodSubscriptions.remove(id);
+                });
+            
+            for (var elderDoc in snapshot.docs) {
+              final elderData = elderDoc.data();
+              final dateOfBirth = elderData['dateOfBirth'] as String?;
+              int age = 0;
+              
+              if (dateOfBirth != null) {
+                final parts = dateOfBirth.split('/');
+                if (parts.length == 3) {
+                  final birthDate = DateTime(
+                    int.parse(parts[2]), // year
+                    int.parse(parts[1]), // month
+                    int.parse(parts[0]), // day
+                  );
+                  age = DateTime.now().difference(birthDate).inDays ~/ 365;
+                }
               }
+
+              // Get initial mood data
+              final latestEmotionQuery = await _firestore
+                  .collection('users')
+                  .doc(elderDoc.id)
+                  .collection('emotions')
+                  .orderBy('timestamp', descending: true)
+                  .limit(1)
+                  .get();
+
+              String mood = 'Unknown';
+              if (latestEmotionQuery.docs.isNotEmpty) {
+                mood = latestEmotionQuery.docs.first.data()['emotion'] ?? 'Unknown';
+              }
+
+              final elderInfo = {
+                'id': elderDoc.id,
+                'name': elderData['name'] ?? 'Unknown',
+                'age': age,
+                'mood': mood,
+                'emergency': elderData['emergency'] ?? false,
+                'profileImage': elderData['profileImage'] ?? 'assets/default_avatar.png',
+                'address': elderData['address'] ?? 'No address provided',
+                'phone': elderData['phone'] ?? 'No phone provided',
+              };
+              
+              elders.add(elderInfo);
+              
+              // Set up real-time listener for mood updates for this elder
+              _setupMoodListener(elderDoc.id);
             }
 
-            elders.add({
-              'id': elderDoc.id,
-              'name': elderData['name'] ?? 'Unknown',
-              'age': age,
-              'mood': latestEmotionQuery.docs.isNotEmpty 
-                ? latestEmotionQuery.docs.first.data()['emotion'] 
-                : 'Unknown',
-              'emergency': elderData['emergency'] ?? false,
+            setState(() {
+              _assignedElders = elders;
+              _isLoading = false;
             });
-          }
-
+          });
+          
+          _subscriptions.add(eldersSubscription);
+        } else {
           setState(() {
-            _assignedElders = elders;
             _isLoading = false;
           });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Caregiver profile not found'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User not logged in'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       print('Error loading caregiver data: $e');
       setState(() {
         _isLoading = false;
       });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
+  void _setupMoodListener(String elderId) {
+    // Cancel existing subscription if it exists
+    _moodSubscriptions[elderId]?.cancel();
+    
+    // Create new subscription for this elder's emotions
+    final moodStream = _firestore
+        .collection('users')
+        .doc(elderId)
+        .collection('emotions')
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .snapshots();
+        
+    final subscription = moodStream.listen((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        final newMood = snapshot.docs.first.data()['emotion'] ?? 'Unknown';
+        
+        setState(() {
+          // Find and update the elder's mood in the list
+          for (int i = 0; i < _assignedElders.length; i++) {
+            if (_assignedElders[i]['id'] == elderId) {
+              _assignedElders[i]['mood'] = newMood;
+              break;
+            }
+          }
+        });
+      }
     });
+    
+    _moodSubscriptions[elderId] = subscription;
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '';
+    
+    final nameParts = name.trim().split(' ');
+    if (nameParts.length > 1) {
+      // Get first letter of first name and first letter of last name
+      return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+    } else if (name.length > 1) {
+      // If only one name, get first two letters
+      return name.substring(0, 2).toUpperCase();
+    } else {
+      // If name is just one character
+      return name.toUpperCase();
+    }
+  }
+
+  void _viewElderDetails(Map<String, dynamic> elder) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ElderDetailsPage(elder: elder),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
+    
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FF),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFB0C4FF),
+        backgroundColor: const Color(0xFF8B9FE8),
         elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Hello, Welcome',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            Text(
-              _caregiverName,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
-            ),
-          ],
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () {},
+        title: const Text(
+          'Home',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         actions: [
-          CircleAvatar(
-            backgroundColor: Colors.grey[300],
-            child: const Icon(Icons.person, color: Colors.black54),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                onPressed: () {
+                  // Navigate to notifications page
+                },
+              ),
+              if (_unreadNotifications > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      _unreadNotifications.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(width: 16),
         ],
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(
+                color: Color(0xFF8B9FE8),
+              ),
             )
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
+          : RefreshIndicator(
+              onRefresh: _loadCaregiverData,
+              color: const Color(0xFF8B9FE8),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Your Assigned Elders',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    // Welcome section with gradient background
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF8B9FE8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 30,
+                                backgroundColor: const Color(0xFFEEF1FF),
+                                backgroundImage: _caregiverProfileImage != 'assets/default_avatar.png' 
+                                    ? AssetImage(_caregiverProfileImage)
+                                    : null,
+                                child: _caregiverProfileImage == 'assets/default_avatar.png'
+                                    ? Text(
+                                        _getInitials(_caregiverName),
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF8B9FE8),
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Hello, $_caregiverName!',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      dateFormat.format(now),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                    if (_caregiverEmail.isNotEmpty)
+                                      Text(
+                                        _caregiverEmail,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    
-                    if (_assignedElders.isEmpty)
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 64,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No elders assigned yet',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _assignedElders.length,
-                        itemBuilder: (context, index) {
-                          final elder = _assignedElders[index];
-                          return ElderProfileCard(
-                            elder: elder,
-                          );
-                        },
+
+                    // Stats section - Only showing patients count
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      child: _buildStatCard(
+                        'Elders',
+                        _assignedElders.length.toString(),
+                        Icons.people_outline,
                       ),
+                    ),
+
+                    // Your Patients section
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Your Elders',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_assignedElders.isNotEmpty)
+                                TextButton(
+                                  onPressed: () {
+                                    // Navigate to all patients page
+                                  },
+                                  child: const Text(
+                                    'View All',
+                                    style: TextStyle(
+                                      color: Color(0xFF8B9FE8),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _assignedElders.isEmpty
+                              ? _buildEmptyState(
+                                  icon: Icons.people_outline,
+                                  title: 'No elders assigned yet',
+                                  subtitle: 'Elders will appear here once assigned to you',
+                                )
+                              : ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _assignedElders.length,
+                                  itemBuilder: (context, index) {
+                                    final elder = _assignedElders[index];
+                                    return GestureDetector(
+                                      onTap: () => _viewElderDetails(elder),
+                                      child: ElderProfileCard(
+                                        elder: elder,
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
       bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: 0),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF1FF),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF8B9FE8),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF8B9FE8),
+                ),
+              ),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 48,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -214,13 +575,38 @@ class ElderProfileCard extends StatelessWidget {
     required this.elder,
   });
 
+  String _getInitials(String name) {
+    if (name.isEmpty) return '';
+    
+    final nameParts = name.trim().split(' ');
+    if (nameParts.length > 1) {
+      // Get first letter of first name and first letter of last name
+      return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+    } else if (name.length > 1) {
+      // If only one name, get first two letters
+      return name.substring(0, 2).toUpperCase();
+    } else {
+      // If name is just one character
+      return name.toUpperCase();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Check if emergency is true
+    final bool isEmergency = elder['emergency'] == true;
+    
+    // Get the mood emoji based on the mood
+    String moodEmoji = _getMoodEmoji(elder['mood']);
+    
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: elder['emergency'] ? Colors.red.shade100 : Colors.white,
+        color: isEmergency ? Colors.red.shade100 : Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: isEmergency 
+            ? Border.all(color: Colors.red.shade300, width: 1.5)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -233,17 +619,57 @@ class ElderProfileCard extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: Colors.grey[200],
-              child: Text(
-                elder['name'].substring(0, 1),
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black54,
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: isEmergency 
+                      ? Colors.red.shade50 
+                      : const Color(0xFFEEF1FF),
+                  backgroundImage: elder['profileImage'] != 'assets/default_avatar.png'
+                      ? AssetImage(elder['profileImage'])
+                      : null,
+                  child: elder['profileImage'] == 'assets/default_avatar.png'
+                      ? Text(
+                          _getInitials(elder['name']),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isEmergency 
+                                ? Colors.red.shade700 
+                                : const Color(0xFF8B9FE8),
+                          ),
+                        )
+                      : null,
                 ),
-              ),
+                // Mood indicator in the bottom right of the avatar
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isEmergency ? Colors.red.shade100 : Colors.white,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      moodEmoji,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -252,9 +678,10 @@ class ElderProfileCard extends StatelessWidget {
                 children: [
                   Text(
                     elder['name'],
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: TextStyle(
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: isEmergency ? Colors.red.shade700 : Colors.black87,
                     ),
                   ),
                   Text(
@@ -286,7 +713,7 @@ class ElderProfileCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (elder['emergency'])
+            if (isEmergency)
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 8,
@@ -305,14 +732,20 @@ class ElderProfileCard extends StatelessWidget {
                     ),
                     SizedBox(width: 4),
                     Text(
-                      'Alert',
+                      'Emergency',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
+              ),
+            if (!isEmergency)
+              const Icon(
+                Icons.chevron_right,
+                color: Colors.grey,
               ),
           ],
         ),
@@ -325,16 +758,41 @@ class ElderProfileCard extends StatelessWidget {
       case 'happy':
         return Colors.green;
       case 'relaxed':
+      case 'calm':
         return Colors.blue;
       case 'tired':
+      case 'sleepy':
         return Colors.orange;
       case 'stressed':
       case 'anxious':
+      case 'sad':
         return Colors.red;
       case 'lonely':
         return Colors.purple;
       default:
         return Colors.grey;
+    }
+  }
+
+  String _getMoodEmoji(String mood) {
+    switch (mood.toLowerCase()) {
+      case 'happy':
+        return '😊';
+      case 'relaxed':
+      case 'calm':
+        return '😌';
+      case 'tired':
+      case 'sleepy':
+        return '😴';
+      case 'stressed':
+      case 'anxious':
+        return '😰';
+      case 'sad':
+        return '😢';
+      case 'lonely':
+        return '😔';
+      default:
+        return '😐';
     }
   }
 }

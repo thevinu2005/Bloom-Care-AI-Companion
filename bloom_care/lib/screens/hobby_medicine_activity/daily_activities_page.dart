@@ -3,6 +3,7 @@ import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:bloom_care/services/notification_service.dart';
 
 class DailyActivitiesPage extends StatefulWidget {
   const DailyActivitiesPage({super.key});
@@ -12,69 +13,188 @@ class DailyActivitiesPage extends StatefulWidget {
 }
 
 class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
-  // Sample data for meals and hobby times
-  List<MealPlan> mealPlans = [
-    MealPlan(
-      time: "7:30 AM",
-      mealType: "Breakfast",
-      description: "Oatmeal with fruits",
-      isCompleted: false,
-    ),
-    MealPlan(
-      time: "12:00 PM",
-      mealType: "Lunch",
-      description: "Grilled chicken salad",
-      isCompleted: false,
-    ),
-    MealPlan(
-      time: "6:30 PM",
-      mealType: "Dinner",
-      description: "Salmon with vegetables",
-      isCompleted: false,
-    ),
-  ];
-
-  List<HobbyTime> hobbyTimes = [
-    HobbyTime(
-      time: "9:00 AM",
-      activity: "Reading",
-      duration: "30 minutes",
-      isCompleted: false,
-    ),
-    HobbyTime(
-      time: "3:00 PM",
-      activity: "Walking",
-      duration: "45 minutes",
-      isCompleted: false,
-    ),
-    HobbyTime(
-      time: "8:00 PM",
-      activity: "Painting",
-      duration: "60 minutes",
-      isCompleted: false,
-    ),
-  ];
-
-  // Sample data for upcoming appointments
-  List<Appointment> appointments = [
-    
-  ];
+  // Lists to store activities
+  List<MealPlan> mealPlans = [];
+  List<HobbyTime> hobbyTimes = [];
+  List<Appointment> appointments = [];
+  
+  // Loading state
+  bool _isLoading = true;
 
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final NotificationService _notificationService = NotificationService();
 
-  // Save changes to local storage and Firestore
-  Future<void> _saveChanges() async {
+  @override
+  void initState() {
+    super.initState();
+    // Load data when the page is initialized
+    _loadData();
+  }
+
+  // Load data from Firestore
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final user = _auth.currentUser;
       if (user == null) {
         throw Exception('User not logged in');
       }
 
-      // Save meal plans to Firestore
-      for (var meal in mealPlans) {
+      // Clear existing data
+      mealPlans.clear();
+      hobbyTimes.clear();
+      appointments.clear();
+
+      // Load meal plans
+      final mealPlansSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('meal_plans')
+          .get();
+
+      for (var doc in mealPlansSnapshot.docs) {
+        final data = doc.data();
+        mealPlans.add(MealPlan(
+          time: data['time'] ?? '',
+          mealType: data['mealType'] ?? '',
+          description: data['description'] ?? '',
+          isCompleted: data['isCompleted'] ?? false,
+          id: doc.id, // Store document ID for updates
+        ));
+      }
+
+      // Load hobby times
+      final hobbyTimesSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('hobby_times')
+          .get();
+
+      for (var doc in hobbyTimesSnapshot.docs) {
+        final data = doc.data();
+        hobbyTimes.add(HobbyTime(
+          time: data['time'] ?? '',
+          activity: data['activity'] ?? '',
+          duration: data['duration'] ?? '',
+          isCompleted: data['isCompleted'] ?? false,
+          id: doc.id, // Store document ID for updates
+        ));
+      }
+
+      // Load appointments
+      final appointmentsSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('appointments')
+          .get();
+
+      for (var doc in appointmentsSnapshot.docs) {
+        final data = doc.data();
+        appointments.add(Appointment(
+          date: data['date'] ?? '',
+          time: data['time'] ?? '',
+          title: data['title'] ?? '',
+          location: data['location'] ?? '',
+          isConfirmed: data['isConfirmed'] ?? false,
+          id: doc.id, // Store document ID for updates
+        ));
+      }
+
+      // If no data was loaded, add sample data (optional)
+      if (mealPlans.isEmpty) {
+        mealPlans = [
+          MealPlan(
+            time: "7:30 AM",
+            mealType: "Breakfast",
+            description: "Oatmeal with fruits",
+            isCompleted: false,
+          ),
+          MealPlan(
+            time: "12:00 PM",
+            mealType: "Lunch",
+            description: "Grilled chicken salad",
+            isCompleted: false,
+          ),
+          MealPlan(
+            time: "6:30 PM",
+            mealType: "Dinner",
+            description: "Salmon with vegetables",
+            isCompleted: false,
+          ),
+        ];
+      }
+
+      if (hobbyTimes.isEmpty) {
+        hobbyTimes = [
+          HobbyTime(
+            time: "9:00 AM",
+            activity: "Reading",
+            duration: "30 minutes",
+            isCompleted: false,
+          ),
+          HobbyTime(
+            time: "3:00 PM",
+            activity: "Walking",
+            duration: "45 minutes",
+            isCompleted: false,
+          ),
+          HobbyTime(
+            time: "8:00 PM",
+            activity: "Painting",
+            duration: "60 minutes",
+            isCompleted: false,
+          ),
+        ];
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Save a single meal plan to Firestore
+  Future<void> _saveMealPlan(MealPlan meal) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // If the meal has an ID, update it, otherwise add a new one
+      if (meal.id != null) {
         await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('meal_plans')
+            .doc(meal.id)
+            .update({
+          'time': meal.time,
+          'mealType': meal.mealType,
+          'description': meal.description,
+          'isCompleted': meal.isCompleted,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Add new meal and update the ID
+        final docRef = await _firestore
             .collection('users')
             .doc(user.uid)
             .collection('meal_plans')
@@ -85,11 +205,41 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
           'isCompleted': meal.isCompleted,
           'timestamp': FieldValue.serverTimestamp(),
         });
+        
+        // Update the meal with the new ID
+        meal.id = docRef.id;
+      }
+    } catch (e) {
+      print('Error saving meal plan: $e');
+      throw e;
+    }
+  }
+
+  // Save a single hobby time to Firestore
+  Future<void> _saveHobbyTime(HobbyTime hobby) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
       }
 
-      // Save hobby times to Firestore
-      for (var hobby in hobbyTimes) {
+      // If the hobby has an ID, update it, otherwise add a new one
+      if (hobby.id != null) {
         await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('hobby_times')
+            .doc(hobby.id)
+            .update({
+          'time': hobby.time,
+          'activity': hobby.activity,
+          'duration': hobby.duration,
+          'isCompleted': hobby.isCompleted,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Add new hobby and update the ID
+        final docRef = await _firestore
             .collection('users')
             .doc(user.uid)
             .collection('hobby_times')
@@ -100,11 +250,42 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
           'isCompleted': hobby.isCompleted,
           'timestamp': FieldValue.serverTimestamp(),
         });
+        
+        // Update the hobby with the new ID
+        hobby.id = docRef.id;
+      }
+    } catch (e) {
+      print('Error saving hobby time: $e');
+      throw e;
+    }
+  }
+
+  // Save a single appointment to Firestore
+  Future<void> _saveAppointment(Appointment appointment) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
       }
 
-      // Save appointments to Firestore
-      for (var appointment in appointments) {
+      // If the appointment has an ID, update it, otherwise add a new one
+      if (appointment.id != null) {
         await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('appointments')
+            .doc(appointment.id)
+            .update({
+          'date': appointment.date,
+          'time': appointment.time,
+          'title': appointment.title,
+          'location': appointment.location,
+          'isConfirmed': appointment.isConfirmed,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Add new appointment and update the ID
+        final docRef = await _firestore
             .collection('users')
             .doc(user.uid)
             .collection('appointments')
@@ -116,6 +297,121 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
           'isConfirmed': appointment.isConfirmed,
           'timestamp': FieldValue.serverTimestamp(),
         });
+        
+        // Update the appointment with the new ID
+        appointment.id = docRef.id;
+      }
+    } catch (e) {
+      print('Error saving appointment: $e');
+      throw e;
+    }
+  }
+
+  // Delete a meal plan from Firestore
+  Future<void> _deleteMealPlan(MealPlan meal) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Only delete from Firestore if it has an ID
+      if (meal.id != null) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('meal_plans')
+            .doc(meal.id)
+            .delete();
+      }
+      
+      // Remove from local list
+      setState(() {
+        mealPlans.remove(meal);
+      });
+    } catch (e) {
+      print('Error deleting meal plan: $e');
+      throw e;
+    }
+  }
+
+  // Delete a hobby time from Firestore
+  Future<void> _deleteHobbyTime(HobbyTime hobby) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Only delete from Firestore if it has an ID
+      if (hobby.id != null) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('hobby_times')
+            .doc(hobby.id)
+            .delete();
+      }
+      
+      // Remove from local list
+      setState(() {
+        hobbyTimes.remove(hobby);
+      });
+    } catch (e) {
+      print('Error deleting hobby time: $e');
+      throw e;
+    }
+  }
+
+  // Delete an appointment from Firestore
+  Future<void> _deleteAppointment(Appointment appointment) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Only delete from Firestore if it has an ID
+      if (appointment.id != null) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('appointments')
+            .doc(appointment.id)
+            .delete();
+      }
+      
+      // Remove from local list
+      setState(() {
+        appointments.remove(appointment);
+      });
+    } catch (e) {
+      print('Error deleting appointment: $e');
+      throw e;
+    }
+  }
+
+  // Save changes to local storage and Firestore
+  Future<void> _saveChanges() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Save all meal plans
+      for (var meal in mealPlans) {
+        await _saveMealPlan(meal);
+      }
+
+      // Save all hobby times
+      for (var hobby in hobbyTimes) {
+        await _saveHobbyTime(hobby);
+      }
+
+      // Save all appointments
+      for (var appointment in appointments) {
+        await _saveAppointment(appointment);
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -196,95 +492,50 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
     }
   }
 
-  // Add a new method to notify the caregiver about elder activities
+  // Updated method to notify the caregiver about elder activities using NotificationService
   Future<void> _notifyCaregiverAboutActivity(String type, String title, String message) async {
     try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('User not logged in');
+      // Extract activity details from the message
+      String activityName = '';
+      String activityDetails = '';
+      
+      // Parse the message to extract relevant information
+      if (type == 'meal') {
+        // For meal notifications, format: "You have added [MealType] at [Time]"
+        if (message.contains('added')) {
+          final parts = message.replaceFirst('You have added ', '').split(' at ');
+          if (parts.length >= 2) {
+            activityName = parts[0]; // Meal type
+            activityDetails = 'at ${parts[1]}'; // Time
+          }
+        }
+      } else if (type == 'hobby') {
+        // For hobby notifications, format: "You have added [Activity] at [Time] for [Duration]"
+        if (message.contains('added')) {
+          final parts = message.replaceFirst('You have added ', '').split(' at ');
+          if (parts.length >= 2) {
+            activityName = parts[0]; // Activity name
+            activityDetails = 'at ${parts[1]}'; // Time and duration
+          }
+        }
+      } else if (type == 'appointment') {
+        // For appointment notifications, format: "You have added [Title] on [Date] at [Time]"
+        if (message.contains('added')) {
+          final parts = message.replaceFirst('You have added ', '').split(' on ');
+          if (parts.length >= 2) {
+            activityName = parts[0]; // Appointment title
+            activityDetails = 'on ${parts[1]}'; // Date and time
+          }
+        }
       }
-
-      // Get elder's data
-      final elderDoc = await _firestore.collection('users').doc(user.uid).get();
-      if (!elderDoc.exists) {
-        return;
-      }
-
-      final elderData = elderDoc.data()!;
-      final elderName = elderData['name'] ?? 'Your elder';
-      final assignedCaregiverId = elderData['assignedCaregiver'] as String?;
-
-      // If no caregiver is assigned, exit
-      if (assignedCaregiverId == null || assignedCaregiverId.isEmpty) {
-        print('No caregiver assigned for this elder');
-        return;
-      }
-
-      // Customize notification details for caregiver
-      Color notificationColor;
-      Color textColor;
-      String iconString;
-      String typeLabel;
-
-      // Determine style and label based on activity type
-      switch (type) {
-        case 'meal':
-          notificationColor = const Color(0xFFD1ECF1);
-          textColor = const Color(0xFF0C5460);
-          iconString = 'restaurant';
-          typeLabel = 'meal';
-          break;
-        case 'hobby':
-          notificationColor = const Color(0xFFFFF3CD);
-          textColor = const Color(0xFF856404);
-          iconString = 'sports_esports';
-          typeLabel = 'hobby';
-          break;
-        case 'appointment':
-          notificationColor = const Color(0xFFE2D9F3);
-          textColor = const Color(0xFF6A359C);
-          iconString = 'event';
-          typeLabel = 'appointment';
-          break;
-        default:
-          notificationColor = const Color(0xFFD1ECF1);
-          textColor = const Color(0xFF0C5460);
-          iconString = 'notifications';
-          typeLabel = 'activity';
-      }
-
-      // Extract the activity details from the elder's message
-      String activityDetail = message;
-      if (message.startsWith('You have')) {
-        activityDetail = message.replaceFirst('You have', '');
-      }
-
-      // Create caregiver message
-      final caregiverMessage = '$elderName has$activityDetail';
-      final caregiverTitle = 'Elder $typeLabel Update';
-
-      // Send notification to caregiver
-      await _firestore
-          .collection('users')
-          .doc(assignedCaregiverId)
-          .collection('notifications')
-          .add({
-        'type': 'elder_activity',
-        'elderName': elderName,
-        'elderId': user.uid,
-        'activityType': type,
-        'title': caregiverTitle,
-        'message': caregiverMessage,
-        'color': notificationColor.value,
-        'textColor': textColor.value,
-        'icon': iconString,
-        'iconColor': const Color(0xFF6B84DC).value,
-        'timestamp': FieldValue.serverTimestamp(),
-        'isRead': false,
-        'priority': 'normal',
-      });
-
-      print('Caregiver notification sent about $elderName\'s $typeLabel');
+      
+      // Use the notification service to send the notification to caregiver
+      await _notificationService.notifyCaregiverAboutElderActivity(
+        activityType: type,
+        activityName: activityName,
+        activityDetails: activityDetails,
+      );
+      
     } catch (e) {
       print('Error sending notification to caregiver: $e');
     }
@@ -319,7 +570,9 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
           ),
         ],
       ),
-      body: _buildDailyActivitiesContent(),
+      body: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : _buildDailyActivitiesContent(),
       bottomNavigationBar: const BottomNav(currentIndex: 0), // Added BottomNav with currentIndex 0
     );
   }
@@ -575,19 +828,32 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                     mealPlans.add(newMeal);
                   });
                   
-                  // Send notification to elder
-                  await _sendNotification(
-                    'meal',
-                    'New Meal Added',
-                    'You have added ${typeController.text} at ${timeController.text}',
-                  );
-                  
-                  // Show success message
-                  if (mounted) {
+                  // Save the new meal to Firestore immediately
+                  try {
+                    await _saveMealPlan(newMeal);
+                    
+                    // Send notification to elder
+                    await _sendNotification(
+                      'meal',
+                      'New Meal Added',
+                      'You have added ${typeController.text} at ${timeController.text}',
+                    );
+                    
+                    // Show success message
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${typeController.text} added to your meal plan'),
+                          backgroundColor: const Color(0xFF8FA2E6),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    print('Error saving new meal: $e');
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('${typeController.text} added to your meal plan'),
-                        backgroundColor: const Color(0xFF8FA2E6),
+                        content: Text('Error saving meal: $e'),
+                        backgroundColor: Colors.red,
                       ),
                     );
                   }
@@ -676,19 +942,32 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                     hobbyTimes.add(newHobby);
                   });
                   
-                  // Send notification
-                  await _sendNotification(
-                    'hobby',
-                    'New Hobby Added',
-                    'You have added ${activityController.text} at ${timeController.text} for ${durationController.text}',
-                  );
-                  
-                  // Show success message
-                  if (mounted) {
+                  // Save the new hobby to Firestore immediately
+                  try {
+                    await _saveHobbyTime(newHobby);
+                    
+                    // Send notification
+                    await _sendNotification(
+                      'hobby',
+                      'New Hobby Added',
+                      'You have added ${activityController.text} at ${timeController.text} for ${durationController.text}',
+                    );
+                    
+                    // Show success message
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${activityController.text} added to your hobby schedule'),
+                          backgroundColor: const Color(0xFF8FA2E6),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    print('Error saving new hobby: $e');
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('${activityController.text} added to your hobby schedule'),
-                        backgroundColor: const Color(0xFF8FA2E6),
+                        content: Text('Error saving hobby: $e'),
+                        backgroundColor: Colors.red,
                       ),
                     );
                   }
@@ -807,19 +1086,32 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                         appointments.add(newAppointment);
                       });
                       
-                      // Send notification
-                      await _sendNotification(
-                        'appointment',
-                        'New Appointment Added',
-                        'You have added ${titleController.text} on ${dateController.text} at ${timeController.text}',
-                      );
-                      
-                      // Show success message
-                      if (mounted) {
+                      // Save the new appointment to Firestore immediately
+                      try {
+                        await _saveAppointment(newAppointment);
+                        
+                        // Send notification
+                        await _sendNotification(
+                          'appointment',
+                          'New Appointment Added',
+                          'You have added ${titleController.text} on ${dateController.text} at ${timeController.text}',
+                        );
+                        
+                        // Show success message
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${titleController.text} added to your appointments'),
+                              backgroundColor: const Color(0xFF8FA2E6),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        print('Error saving new appointment: $e');
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${titleController.text} added to your appointments'),
-                            backgroundColor: const Color(0xFF8FA2E6),
+                            content: Text('Error saving appointment: $e'),
+                            backgroundColor: Colors.red,
                           ),
                         );
                       }
@@ -895,9 +1187,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
         child: Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (direction) {
-        setState(() {
-          mealPlans.remove(meal);
-        });
+        _deleteMealPlan(meal);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Meal plan deleted'),
@@ -956,6 +1246,10 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                   setState(() {
                     meal.isCompleted = value ?? false;
                   });
+                  // Update in Firestore
+                  if (meal.id != null) {
+                    _saveMealPlan(meal);
+                  }
                 },
               ),
               IconButton(
@@ -965,10 +1259,8 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                     context,
                     'Delete Meal',
                     'Are you sure you want to delete this meal plan?',
-                        () {
-                      setState(() {
-                        mealPlans.remove(meal);
-                      });
+                    () {
+                      _deleteMealPlan(meal);
                     },
                   );
                 },
@@ -996,9 +1288,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
         child: Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (direction) {
-        setState(() {
-          hobbyTimes.remove(hobby);
-        });
+        _deleteHobbyTime(hobby);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Hobby time deleted'),
@@ -1057,6 +1347,10 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                   setState(() {
                     hobby.isCompleted = value ?? false;
                   });
+                  // Update in Firestore
+                  if (hobby.id != null) {
+                    _saveHobbyTime(hobby);
+                  }
                 },
               ),
               IconButton(
@@ -1066,10 +1360,8 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                     context,
                     'Delete Hobby',
                     'Are you sure you want to delete this hobby time?',
-                        () {
-                      setState(() {
-                        hobbyTimes.remove(hobby);
-                      });
+                    () {
+                      _deleteHobbyTime(hobby);
                     },
                   );
                 },
@@ -1097,9 +1389,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
         child: Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (direction) {
-        setState(() {
-          appointments.remove(appointment);
-        });
+        _deleteAppointment(appointment);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Appointment deleted'),
@@ -1186,10 +1476,8 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                     context,
                     'Delete Appointment',
                     'Are you sure you want to delete this appointment?',
-                        () {
-                      setState(() {
-                        appointments.remove(appointment);
-                      });
+                    () {
+                      _deleteAppointment(appointment);
                     },
                   );
                 },
@@ -1293,12 +1581,25 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                   meal.description = descController.text;
                 });
                 
-                // Send notification for edit
-                await _sendNotification(
-                  'meal',
-                  'Meal Plan Updated',
-                  'You have updated ${typeController.text} at ${timeController.text}',
-                );
+                // Save changes to Firestore
+                try {
+                  await _saveMealPlan(meal);
+                  
+                  // Send notification for edit
+                  await _sendNotification(
+                    'meal',
+                    'Meal Plan Updated',
+                    'You have updated ${typeController.text} at ${timeController.text}',
+                  );
+                } catch (e) {
+                  print('Error updating meal: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating meal: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
                 
                 Navigator.of(context).pop();
               },
@@ -1366,12 +1667,25 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                   hobby.duration = durationController.text;
                 });
                 
-                // Send notification for edit
-                await _sendNotification(
-                  'hobby',
-                  'Hobby Time Updated',
-                  'You have updated ${activityController.text} at ${timeController.text}',
-                );
+                // Save changes to Firestore
+                try {
+                  await _saveHobbyTime(hobby);
+                  
+                  // Send notification for edit
+                  await _sendNotification(
+                    'hobby',
+                    'Hobby Time Updated',
+                    'You have updated ${activityController.text} at ${timeController.text}',
+                  );
+                } catch (e) {
+                  print('Error updating hobby: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating hobby: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
                 
                 Navigator.of(context).pop();
               },
@@ -1469,12 +1783,25 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
                       appointment.isConfirmed = isConfirmed;
                     });
                     
-                    // Send notification for edit
-                    await _sendNotification(
-                      'appointment',
-                      'Appointment Updated',
-                      'You have updated ${titleController.text} on ${dateController.text}',
-                    );
+                    // Save changes to Firestore
+                    try {
+                      await _saveAppointment(appointment);
+                      
+                      // Send notification for edit
+                      await _sendNotification(
+                        'appointment',
+                        'Appointment Updated',
+                        'You have updated ${titleController.text} on ${dateController.text}',
+                      );
+                    } catch (e) {
+                      print('Error updating appointment: $e');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error updating appointment: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                     
                     Navigator.of(context).pop();
                   },
@@ -1494,12 +1821,14 @@ class MealPlan {
   String mealType;
   String description;
   bool isCompleted;
+  String? id; // Document ID for Firestore
 
   MealPlan({
     required this.time,
     required this.mealType,
     required this.description,
     required this.isCompleted,
+    this.id,
   });
 }
 
@@ -1509,12 +1838,14 @@ class HobbyTime {
   String activity;
   String duration;
   bool isCompleted;
+  String? id; // Document ID for Firestore
 
   HobbyTime({
     required this.time,
     required this.activity,
     required this.duration,
     required this.isCompleted,
+    this.id,
   });
 }
 
@@ -1525,6 +1856,7 @@ class Appointment {
   String title;
   String location;
   bool isConfirmed;
+  String? id; // Document ID for Firestore
 
   Appointment({
     required this.date,
@@ -1532,6 +1864,6 @@ class Appointment {
     required this.title,
     required this.location,
     required this.isConfirmed,
+    this.id,
   });
 }
-
