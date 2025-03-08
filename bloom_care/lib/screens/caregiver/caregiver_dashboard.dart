@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:bloom_care/screens/caregiver/medication_page.dart';
 import 'package:bloom_care/screens/caregiver/reminders_page.dart';
-import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart ';
 
 class ElderDetailsPage extends StatefulWidget {
   final Map<String, dynamic> elder;
@@ -204,10 +203,10 @@ class _ElderDetailsPageState extends State<ElderDetailsPage> {
         title: Text('${_elder['name']} - Details'),
         backgroundColor: const Color(0xFF8B9FE8),
         actions: [
-          // IconButton(
-          //   icon: const Icon(Icons.refresh),
-          //   onPressed: _loadElderDetails,
-          // ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadElderDetails,
+          ),
         ],
       ),
       body: _isLoading
@@ -406,7 +405,6 @@ class _ElderDetailsPageState extends State<ElderDetailsPage> {
                 ],
               ),
             ),
-            bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: -1),
     );
   }
 
@@ -515,7 +513,6 @@ Widget _buildQuickActionsSection(BuildContext context) {
                   );
                 },
               ),
-              
               _buildQuickActionButton(
                 icon: Icons.directions_walk,
                 label: 'Activities',
@@ -540,7 +537,6 @@ Widget _buildQuickActionsSection(BuildContext context) {
                   // Navigate to messaging page
                 },
               ),
-              
             ],
           ),
         ],

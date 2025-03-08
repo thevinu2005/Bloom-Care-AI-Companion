@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:bloom_care/widgets/navigation_bar.dart';
+import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bloom_care/services/notification_service.dart';
 import 'package:intl/intl.dart';
-import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
 
 class ActivitiesPage extends StatefulWidget {
   final String? elderId; // Add elderId parameter to show specific elder's activities
@@ -1147,6 +1146,7 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
                 ),
               ),
             ),
+      // Ensure the BottomNav_for_caregivers widget is used correctly in the build method
       bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: -1),
     );
   }
