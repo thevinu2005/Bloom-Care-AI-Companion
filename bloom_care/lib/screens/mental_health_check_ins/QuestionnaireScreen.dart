@@ -1,108 +1,311 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
+import 'dart:math';
 
-void main() {
-  runApp(MaterialApp(home: QuestionnaireScreen()));
-}
+// Circular Progress Painter
+class CircularProgressPainter extends CustomPainter {
+  final double progress;
+  final Color backgroundColor;
+  final Color progressColor;
+  final double strokeWidth;
 
-class QuestionnaireScreen extends StatefulWidget {
+  CircularProgressPainter({
+    required this.progress,
+    required this.backgroundColor,
+    required this.progressColor,
+    required this.strokeWidth,
+  });
+
   @override
-  _QuestionnaireScreenState createState() => _QuestionnaireScreenState();
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = min(size.width, size.height) / 2 - strokeWidth / 2;
+
+    // Draw background circle
+    final backgroundPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    canvas.drawCircle(center, radius, backgroundPaint);
+
+    // Draw progress arc
+    final progressPaint = Paint()
+      ..color = progressColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final sweepAngle = 2 * pi * progress;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2, // Start from top
+      sweepAngle,
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(CircularProgressPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.progressColor != progressColor ||
+        oldDelegate.strokeWidth != strokeWidth;
+  }
 }
 
-class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
-  final Map<String, List<String>> questionsWithOptions = {
-    "How would you rate your overall mood today?": ["Excellent", "Good", "Neutral", "Poor", "Very Poor"],
-    "How often have you felt happy this week?": ["Always", "Often", "Sometimes", "Rarely", "Never"],
-    "How well can you manage your stress?": ["Very Well", "Well", "Moderately", "Poorly", "Very Poorly"],
-    "How would you rate your sleep quality?": ["Excellent", "Good", "Fair", "Poor", "Very Poor"],
-    "How often do you engage in social activities?": ["Very Often", "Often", "Sometimes", "Rarely", "Never"],
-    "How well can you concentrate on tasks?": ["Very Well", "Well", "Moderately", "Poorly", "Very Poorly"],
-    "How would you rate your energy levels?": ["Very High", "High", "Moderate", "Low", "Very Low"],
-    "How satisfied are you with yourself?": ["Very Satisfied", "Satisfied", "Neutral", "Dissatisfied", "Very Dissatisfied"],
-    "How motivated are you in your work/study?": ["Very Motivated", "Motivated", "Neutral", "Unmotivated", "Very Unmotivated"],
-    "How well do you handle challenges?": ["Very Well", "Well", "Moderately", "Poorly", "Very Poorly"],
-  };
+// Questionnaire Model
+class QuestionnaireModel {
+  final String question;
+  final List<String> options;
+  int? selectedOption;
 
-  late List<String> selectedQuestions;
-  int currentQuestionIndex = 0;
-  List<String?> answers = List.filled(5, null);
+  QuestionnaireModel({
+    required this.question,
+    required this.options,
+    this.selectedOption,
+  });
+}
+
+// Main Questionnaire Page
+class CustomQuestionnairePage extends StatefulWidget {
+  const CustomQuestionnairePage({super.key});
+
+  @override
+  State<CustomQuestionnairePage> createState() => _CustomQuestionnairePageState();
+}
+
+class _CustomQuestionnairePageState extends State<CustomQuestionnairePage> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _progressAnimation;
+
+  int _currentQuestionIndex = 0;
+  final List<QuestionnaireModel> _questions = [
+    QuestionnaireModel(
+      question: "How often do you exercise?",
+      options: ["Daily", "2-3 times a week", "Once a week", "Rarely"],
+    ),
+    QuestionnaireModel(
+      question: "What is your preferred workout type?",
+      options: ["Cardio", "Strength training", "Yoga", "Team sports"],
+    ),
+    QuestionnaireModel(
+      question: "How would you rate your current fitness level?",
+      options: ["Beginner", "Intermediate", "Advanced", "Professional"],
+    ),
+    QuestionnaireModel(
+      question: "What are your fitness goals?",
+      options: ["Lose weight", "Build muscle", "Improve endurance", "Overall health"],
+    ),
+    QuestionnaireModel(
+      question: "How much time can you dedicate to exercise daily?",
+      options: ["Less than 30 minutes", "30-60 minutes", "1-2 hours", "More than 2 hours"],
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _selectRandomQuestions();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _progressAnimation = Tween<double>(begin: 0, end: 0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _updateProgressAnimation();
   }
 
-  void _selectRandomQuestions() {
-    final random = Random();
-    selectedQuestions = (questionsWithOptions.keys.toList()..shuffle(random)).take(5).toList();
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _updateProgressAnimation() {
+    int answeredQuestions = _questions.where((q) => q.selectedOption != null).length;
+    double newProgress = answeredQuestions / _questions.length;
+
+    _progressAnimation = Tween<double>(
+      begin: _progressAnimation.value,
+      end: newProgress,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
+    _animationController.forward(from: 0);
+  }
+
+  void _selectOption(int optionIndex) {
+    setState(() {
+      _questions[_currentQuestionIndex].selectedOption = optionIndex;
+      _updateProgressAnimation();
+    });
   }
 
   void _nextQuestion() {
-    if (currentQuestionIndex < 4) {
-      setState(() => currentQuestionIndex++);
+    if (_currentQuestionIndex < _questions.length - 1) {
+      setState(() {
+        _currentQuestionIndex++;
+      });
     } else {
-      _submitAnswers();
+      _showCompletionDialog();
     }
   }
-
+  
   void _previousQuestion() {
-    if (currentQuestionIndex > 0) {
-      setState(() => currentQuestionIndex--);
+    if (_currentQuestionIndex > 0) {
+      setState(() {
+        _currentQuestionIndex--;
+      });
     }
   }
 
-  void _submitAnswers() {
-    print("Submitted answers: ${answers}");
+  void _showCompletionDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text("Submission Successful"),
-        content: Text("Your questionnaire has been submitted!"),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("OK"))],
+      builder: (context) => AlertDialog(
+        title: const Text("Survey Completed"),
+        content: const Text("Thank you for completing the questionnaire!"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Exit the questionnaire
+            },
+            child: const Text("OK"),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    String question = selectedQuestions[currentQuestionIndex];
-    List<String> options = questionsWithOptions[question]!;
-
     return Scaffold(
-      body: Container(
-        padding: EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [Colors.purple.shade700, Colors.blue.shade600], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Questionnaire for Check your Menatal Health',
+          style: TextStyle(color: Colors.white),
         ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(height: 50),
-            LinearProgressIndicator(value: (currentQuestionIndex + 1) / 5),
-            SizedBox(height: 20),
-            Text("Question ${currentQuestionIndex + 1}/5", style: TextStyle(color: Colors.white70, fontSize: 16)),
-            SizedBox(height: 20),
-            Text(question, style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-            SizedBox(height: 20),
-            DropdownButton<String>(
-              value: answers[currentQuestionIndex],
-              hint: Text("Select your answer", style: TextStyle(color: Colors.white)),
-              dropdownColor: Colors.white,
-              onChanged: (value) => setState(() => answers[currentQuestionIndex] = value),
-              items: options.map((option) => DropdownMenuItem(value: option, child: Text(option))).toList(),
+            const SizedBox(height: 20),
+            // Progress indicator
+            Center(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  AnimatedBuilder(
+                    animation: _progressAnimation,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        size: const Size(180, 180),
+                        painter: CircularProgressPainter(
+                          progress: _progressAnimation.value,
+                          backgroundColor: Colors.grey[800]!,
+                          progressColor: Colors.deepPurple,
+                          strokeWidth: 12,
+                        ),
+                      );
+                    },
+                  ),
+                  AnimatedBuilder(
+                    animation: _progressAnimation,
+                    builder: (context, child) {
+                      return Text(
+                        "${(_progressAnimation.value * 100).toInt()}%",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-            Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (currentQuestionIndex > 0)
-                  ElevatedButton(onPressed: _previousQuestion, child: Text("Back")),
-                ElevatedButton(onPressed: answers[currentQuestionIndex] != null ? _nextQuestion : null, child: Text(currentQuestionIndex == 4 ? "Submit" : "Next")),
-              ],
+            const SizedBox(height: 40),
+            // Question
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Text(
+                _questions[_currentQuestionIndex].question,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
-            SizedBox(height: 50),
+            const SizedBox(height: 30),
+            // Options
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                itemCount: _questions[_currentQuestionIndex].options.length,
+                itemBuilder: (context, index) {
+                  final isSelected = _questions[_currentQuestionIndex].selectedOption == index;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: InkWell(
+                      onTap: () => _selectOption(index),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.deepPurple : Colors.grey[850],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          _questions[_currentQuestionIndex].options[index],
+                          style: TextStyle(color: isSelected ? Colors.white : Colors.grey[300], fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            // Navigation buttons
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Back button
+                  ElevatedButton(
+                    onPressed: _currentQuestionIndex > 0 ? _previousQuestion : null,
+                    child: const Text("Back"),
+                  ),
+                  // Next button
+                  ElevatedButton(
+                    onPressed: _questions[_currentQuestionIndex].selectedOption != null ? _nextQuestion : null,
+                    child: const Text("Next"),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
