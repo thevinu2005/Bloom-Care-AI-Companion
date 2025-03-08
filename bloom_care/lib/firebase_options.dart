@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -64,6 +55,35 @@ class DefaultFirebaseOptions {
     projectId: 'bloomcarenew',
     storageBucket: 'bloomcarenew.firebasestorage.app',
     iosBundleId: 'com.example.bloomCare',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyDyh5HseL9MupDlHY7QkKxuH2vYcqQejtc',
+    appId: '1:276520827269:web:c522008e816163fab36cec',
+    messagingSenderId: '276520827269',
+    projectId: 'bloomcarenew',
+    authDomain: 'bloomcarenew.firebaseapp.com',
+    storageBucket: 'bloomcarenew.firebasestorage.app',
+    measurementId: 'G-4X4WXQJJFV',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyAS2axj1btQK5VlWvhkS3OYdqkP5oZFmVQ',
+    appId: '1:276520827269:ios:934524c83abdc462b36cec',
+    messagingSenderId: '276520827269',
+    projectId: 'bloomcarenew',
+    storageBucket: 'bloomcarenew.firebasestorage.app',
+    iosBundleId: 'com.example.bloomCare',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyDyh5HseL9MupDlHY7QkKxuH2vYcqQejtc',
+    appId: '1:276520827269:web:895a925fa378807fb36cec',
+    messagingSenderId: '276520827269',
+    projectId: 'bloomcarenew',
+    authDomain: 'bloomcarenew.firebaseapp.com',
+    storageBucket: 'bloomcarenew.firebasestorage.app',
+    measurementId: 'G-LV91TKZSXB',
   );
 
 }
