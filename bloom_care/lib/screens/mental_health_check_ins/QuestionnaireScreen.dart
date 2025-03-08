@@ -1,6 +1,60 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
+// Circular Progress Painter
+class CircularProgressPainter extends CustomPainter {
+  final double progress;
+  final Color backgroundColor;
+  final Color progressColor;
+  final double strokeWidth;
+
+  CircularProgressPainter({
+    required this.progress,
+    required this.backgroundColor,
+    required this.progressColor,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = min(size.width, size.height) / 2 - strokeWidth / 2;
+
+    // Draw background circle
+    final backgroundPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    canvas.drawCircle(center, radius, backgroundPaint);
+
+    // Draw progress arc
+    final progressPaint = Paint()
+      ..color = progressColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final sweepAngle = 2 * pi * progress;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2, // Start from top
+      sweepAngle,
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(CircularProgressPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.progressColor != progressColor ||
+        oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+
+// Questionnaire Model
 class QuestionnaireModel {
   final String question;
   final List<String> options;
@@ -13,6 +67,7 @@ class QuestionnaireModel {
   });
 }
 
+// Main Questionnaire Page
 class CustomQuestionnairePage extends StatefulWidget {
   const CustomQuestionnairePage({super.key});
 
@@ -23,7 +78,7 @@ class CustomQuestionnairePage extends StatefulWidget {
 class _CustomQuestionnairePageState extends State<CustomQuestionnairePage> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _progressAnimation;
-  
+
   int _currentQuestionIndex = 0;
   final List<QuestionnaireModel> _questions = [
     QuestionnaireModel(
@@ -68,21 +123,16 @@ class _CustomQuestionnairePageState extends State<CustomQuestionnairePage> with 
   }
 
   void _updateProgressAnimation() {
-    int answeredQuestions = 0;
-    for (var question in _questions) {
-      if (question.selectedOption != null) {
-        answeredQuestions++;
-      }
-    }
+    int answeredQuestions = _questions.where((q) => q.selectedOption != null).length;
     double newProgress = answeredQuestions / _questions.length;
-    
+
     _progressAnimation = Tween<double>(
       begin: _progressAnimation.value,
       end: newProgress,
     ).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-    
+
     _animationController.forward(from: 0);
   }
 
@@ -98,15 +148,36 @@ class _CustomQuestionnairePageState extends State<CustomQuestionnairePage> with 
       setState(() {
         _currentQuestionIndex++;
       });
+    } else {
+      _showCompletionDialog();
     }
   }
-
+  
   void _previousQuestion() {
     if (_currentQuestionIndex > 0) {
       setState(() {
         _currentQuestionIndex--;
       });
     }
+  }
+
+  void _showCompletionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Survey Completed"),
+        content: const Text("Thank you for completing the questionnaire!"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Exit the questionnaire
+            },
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -117,7 +188,7 @@ class _CustomQuestionnairePageState extends State<CustomQuestionnairePage> with 
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Fitness Questionnaire',
+          'Questionnaire for Check your Menatal Health',
           style: TextStyle(color: Colors.white),
         ),
         leading: IconButton(
@@ -205,17 +276,10 @@ class _CustomQuestionnairePageState extends State<CustomQuestionnairePage> with 
                         decoration: BoxDecoration(
                           color: isSelected ? Colors.deepPurple : Colors.grey[850],
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected ? Colors.deepPurple : Colors.transparent,
-                            width: 2,
-                          ),
                         ),
                         child: Text(
                           _questions[_currentQuestionIndex].options[index],
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.grey[300],
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(color: isSelected ? Colors.white : Colors.grey[300], fontSize: 16),
                         ),
                       ),
                     ),
@@ -229,33 +293,15 @@ class _CustomQuestionnairePageState extends State<CustomQuestionnairePage> with 
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // Back button
                   ElevatedButton(
                     onPressed: _currentQuestionIndex > 0 ? _previousQuestion : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[800],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Previous'),
+                    child: const Text("Back"),
                   ),
+                  // Next button
                   ElevatedButton(
-                    onPressed: _questions[_currentQuestionIndex].selectedOption != null
-                        ? _nextQuestion
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      _currentQuestionIndex < _questions.length - 1 ? 'Next' : 'Finish',
-                    ),
+                    onPressed: _questions[_currentQuestionIndex].selectedOption != null ? _nextQuestion : null,
+                    child: const Text("Next"),
                   ),
                 ],
               ),
@@ -266,56 +312,3 @@ class _CustomQuestionnairePageState extends State<CustomQuestionnairePage> with 
     );
   }
 }
-
-class CircularProgressPainter extends CustomPainter {
-  final double progress;
-  final Color backgroundColor;
-  final Color progressColor;
-  final double strokeWidth;
-
-  CircularProgressPainter({
-    required this.progress,
-    required this.backgroundColor,
-    required this.progressColor,
-    required this.strokeWidth,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = min(size.width, size.height) / 2 - strokeWidth / 2;
-
-    // Draw background circle
-    final backgroundPaint = Paint()
-      ..color = backgroundColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
-
-    canvas.drawCircle(center, radius, backgroundPaint);
-
-    // Draw progress arc
-    final progressPaint = Paint()
-      ..color = progressColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    final sweepAngle = 2 * pi * progress;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -pi / 2, // Start from top
-      sweepAngle,
-      false,
-      progressPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(CircularProgressPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.backgroundColor != backgroundColor ||
-        oldDelegate.progressColor != progressColor ||
-        oldDelegate.strokeWidth != strokeWidth;
-  }
-}
-
