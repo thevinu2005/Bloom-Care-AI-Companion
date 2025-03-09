@@ -1,3 +1,4 @@
+import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
 import 'package:flutter/material.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -573,7 +574,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
       body: _isLoading 
           ? const Center(child: CircularProgressIndicator())
           : _buildDailyActivitiesContent(),
-      bottomNavigationBar: const BottomNav(currentIndex: -1), // Added BottomNav with currentIndex 0
+      bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: -1), // Added BottomNav with currentIndex 0
     );
   }
 

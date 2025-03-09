@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:bloom_care/screens/caregiver/medication_page.dart';
 import 'package:bloom_care/screens/caregiver/elder_activities_feed.dart';
-
+import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
 
 class ElderDetailsPage extends StatefulWidget {
   final Map<String, dynamic> elder;
@@ -800,26 +800,11 @@ Widget _buildEmotionChart() {
 
                   const SizedBox(height: 16),
 
-                  // Activity Feed Card - NEW SECTION
-                  _buildDetailsCard(
-                    title: 'Recent Activity Feed',
-                    children: [
-                      Container(
-                        height: 300,
-                        child: ElderActivityFeed(elderId: _elder['id']),
-                      ),
-                    ],
-                    actionText: 'View Full Feed',
-                    onActionPressed: _viewAllActivities,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Quick Actions
                   _buildQuickActionsSection(context),
                 ],
               ),
             ),
+      bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: -1),
     );
   }
 
@@ -868,12 +853,6 @@ Widget _buildEmotionChart() {
                     );
                   },
                 ),
-                _buildQuickActionButton(
-                  icon: Icons.history,
-                  label: 'Activity Feed',
-                  onTap: _viewAllActivities,
-                ),
-                // Remove the Emotions button
               ],
             ),
           ],
