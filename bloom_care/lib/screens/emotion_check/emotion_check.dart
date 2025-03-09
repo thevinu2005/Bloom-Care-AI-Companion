@@ -12,9 +12,12 @@ import 'package:bloom_care/services/ml_service.dart';
 import 'package:bloom_care/services/emotion_response.dart';
 import 'package:bloom_care/screens/home/elders_home.dart';
 import 'package:bloom_care/widgets/emotion_resourses_widget.dart';
+import 'package:intl/intl.dart';
 
 class EmotionCheck extends StatefulWidget {
-  const EmotionCheck({super.key});
+  final String? elderId; // Optional: If provided, save emotion for this elder (for caregivers)
+
+  const EmotionCheck({super.key, this.elderId});
 
   @override
   State<EmotionCheck> createState() => _EmotionCheckState();
@@ -49,9 +52,12 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     try {
       final user = _auth.currentUser;
       if (user != null) {
+        // If elderId is provided, load that elder's data instead
+        final String userId = widget.elderId ?? user.uid;
+        
         final userData = await _firestore
             .collection('users')
-            .doc(user.uid)
+            .doc(userId)
             .get();
 
         if (userData.exists) {
@@ -74,17 +80,33 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     try {
       final user = _auth.currentUser;
       if (user != null) {
-        print('Saving emotion data for user: ${user.uid}');
+        // Determine which user ID to use (current user or elder)
+        final String userId = widget.elderId ?? user.uid;
+        
+        print('Saving emotion data for user: $userId');
         print('Emotion: $emotion');
         print('Probabilities: $probabilities');
         
-        await _firestore.collection('users').doc(user.uid).collection('emotions').add({
+        // Format current timestamp for display
+        final now = DateTime.now();
+        final formattedTime = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
+        
+        // Save to emotions subcollection
+        await _firestore.collection('users').doc(userId).collection('emotions').add({
           'emotion': emotion,
           'probabilities': probabilities,
           'timestamp': FieldValue.serverTimestamp(),
+          'formattedTime': formattedTime,
+          'userId': userId,  // Add user ID for easier querying
         });
         
-        print('Emotion data saved successfully for user: ${user.uid}');
+        // Also update the user's mood in their profile
+        await _firestore.collection('users').doc(userId).update({
+          'mood': emotion,
+          'lastMoodUpdate': FieldValue.serverTimestamp(),
+        });
+        
+        print('Emotion data saved successfully for user: $userId');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -452,6 +474,45 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
     );
   }
 
+  // Send notification about emotion update
+  Future<void> _sendEmotionNotification() async {
+    try {
+      if (widget.elderId == null) return;
+      
+      final user = _auth.currentUser;
+      if (user == null) return;
+      
+      // Get caregiver's name
+      final caregiverDoc = await _firestore.collection('users').doc(user.uid).get();
+      final caregiverName = caregiverDoc.data()?['name'] ?? 'Your caregiver';
+      
+      // Get elder's name
+      final elderDoc = await _firestore.collection('users').doc(widget.elderId).get();
+      final elderName = elderDoc.data()?['name'] ?? 'Elder';
+      
+      // Create notification for the elder
+      await _firestore
+          .collection('users')
+          .doc(widget.elderId)
+          .collection('notifications')
+          .add({
+        'type': 'emotion',
+        'title': 'Emotion Update',
+        'message': '$caregiverName has recorded your mood as ${_analysisResult?.result?.predictedEmotion ?? "unknown"}',
+        'color': Colors.blue.value,
+        'textColor': Colors.white.value,
+        'icon': 'mood',
+        'iconColor': Colors.white.value,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+      
+      print('Emotion notification sent to elder: $elderName');
+    } catch (e) {
+      print('Error sending emotion notification: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -606,7 +667,7 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
           ],
         ),
       ),
-      bottomNavigationBar: const BottomNav( currentIndex: -1),
+      bottomNavigationBar: const BottomNav(currentIndex: -1),
     );
   }
 }
