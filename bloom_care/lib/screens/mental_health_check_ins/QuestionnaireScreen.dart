@@ -259,8 +259,106 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     });
   }
 
+  Widget _buildResultsScreen() {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F1123),
+      appBar: AppBar(
+        title: const Text('Your Results'),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          // Background image with opacity
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.1,
+              child: Image.asset(
+                'assets/background.jpg', // Replace with your image path
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          // Content
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Mental Health Score Card
+                Container(
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1D30),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Mental Health Score",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            "$_mentalHealthScore/15",
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 255, 255, 255),
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Progress Bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: _scorePercentage / 100,
+                          backgroundColor: Colors.grey[700],
+                          color: const Color.fromARGB(255, 255, 255, 255),
+                          minHeight: 8,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Score Percentage",
+                            style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+                          ),
+                          Text(
+                            "${_scorePercentage.toInt()}%",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_showResults) {
+      return _buildResultsScreen();
+    }
+    
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -279,7 +377,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
             child: Opacity(
               opacity: 0.1,
               child: Image.asset(
-                'assets/background.jpg',
+                'assets/background.jpg', // Replace with your image path
                 fit: BoxFit.cover,
               ),
             ),
