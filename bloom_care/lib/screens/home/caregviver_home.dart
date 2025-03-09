@@ -5,6 +5,7 @@ import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:bloom_care/screens/caregiver/caregiver_dashboard.dart';
+import 'package:bloom_care/screens/notification/notification_detail.dart';
 
 class CaregiverHomePage extends StatefulWidget {
   const CaregiverHomePage({super.key});
@@ -284,7 +285,7 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
               IconButton(
                 icon: const Icon(Icons.notifications_outlined, color: Colors.white),
                 onPressed: () {
-                  // Navigate to notifications page
+                  Navigator.pushNamed(context, '/caregivernotification');
                 },
               ),
               if (_unreadNotifications > 0)

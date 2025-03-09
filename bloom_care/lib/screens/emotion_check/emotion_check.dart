@@ -553,7 +553,7 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
                     ),
                   if (!_showResults && !_isAnalyzing)
                     const Text(
-                      'How may I assist you today?',
+                      'Lets check your Emotion status',
                       style: TextStyle(
                         fontSize: 20,
                         color: Colors.white70,

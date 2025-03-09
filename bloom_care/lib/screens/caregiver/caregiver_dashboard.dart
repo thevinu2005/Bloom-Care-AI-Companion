@@ -121,7 +121,7 @@ Widget _buildEmotionChart() {
       ),
       child: const Center(
         child: Text(
-          'No emotion data available',
+          'choosed current mood',
           style: TextStyle(
             color: Colors.grey,
             fontStyle: FontStyle.italic,

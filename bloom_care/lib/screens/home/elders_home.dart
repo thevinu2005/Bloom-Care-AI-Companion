@@ -6,6 +6,7 @@ import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:bloom_care/screens/emotion_check/emotion_check.dart';
 import 'package:bloom_care/screens/hobby_medicine_activity/activity_page.dart';
 import 'dart:math';
+import 'package:bloom_care/screens/mental_health_check_ins/mental_health_check_ins.dart';
 
 
 class BloomCareHomePage extends StatefulWidget {
@@ -18,6 +19,7 @@ class BloomCareHomePage extends StatefulWidget {
 class _BloomCareHomePageState extends State<BloomCareHomePage> {
   String? selectedMood;
   bool _isLoading = true;
+  int _unreadNotifications = 0;
   Map<String, dynamic>? _userData;
   late Stream<DocumentSnapshot> _userStream;
   late Stream<String> _timeStream;
@@ -164,6 +166,39 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
             );
           },
         ),
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/eldernotification');
+                },
+              ),
+              if (_unreadNotifications > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      _unreadNotifications.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
 
       ),
       body: StreamBuilder<DocumentSnapshot>(
@@ -398,24 +433,6 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Center(
-                        child: ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.edit, size: 18),
-                          label: const Text('Update Profile'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6B84DC),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -581,7 +598,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
       child: InkWell(
         onTap: () {
           Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const ActivityPage()),
+          MaterialPageRoute(builder: (context) => const MentalHealthStartPage()),
          );
         },
         borderRadius: BorderRadius.circular(16),

@@ -599,18 +599,6 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
                                   ],
                                 ),
                           const SizedBox(height: 8),
-                          // Quick contact buttons (only in view mode)
-                          if (!_isEditing)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildContactButton(Icons.call, "Call"),
-                                const SizedBox(width: 16),
-                                _buildContactButton(Icons.message, "Message"),
-                                const SizedBox(width: 16),
-                                _buildContactButton(Icons.email, "Email"),
-                              ],
-                            ),
                         ],
                       ),
                     ),
@@ -689,12 +677,6 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
                         : _buildSkillsGrid(caregiverData["skills"] ?? []),
 
                     const SizedBox(height: 24),
-
-                    // Statistics Section
-                    _buildSectionTitle("Care Statistics"),
-                    _buildStatsCard(),
-
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -703,32 +685,7 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
     );
   }
 
-  Widget _buildContactButton(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            color: accentColor,
-            size: 24,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[700],
-          ),
-        ),
-      ],
-    );
-  }
+  
 
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -1214,114 +1171,5 @@ class _CaregiverProfilePageState extends State<CaregiverProfilePage> {
     );
   }
 
-  Widget _buildStatsCard() {
-    // Get stats from caregiverData or use defaults
-    final stats = caregiverData['stats'] as Map<String, dynamic>? ?? {
-      "visits": 0,
-      "patients": 0,
-      "hours": 0,
-      "patientSatisfaction": 0.0,
-      "attendanceRate": 0.0
-    };
-    
-    final visits = stats['visits'] ?? 0;
-    final patients = stats['patients'] ?? 0;
-    final hours = stats['hours'] ?? 0;
-    final patientSatisfaction = (stats['patientSatisfaction'] ?? 0.0).toDouble();
-    final attendanceRate = (stats['attendanceRate'] ?? 0.0).toDouble();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem(visits.toString(), "Visits"),
-              _buildStatItem(patients.toString(), "Patients"),
-              _buildStatItem(hours.toString(), "Hours"),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildRatingIndicator("Patient Satisfaction", patientSatisfaction),
-              _buildRatingIndicator("Attendance Rate", attendanceRate),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: accentColor,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRatingIndicator(String label, double rating) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Text(
-              rating.toStringAsFixed(1),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: accentColor,
-              ),
-            ),
-            const SizedBox(width: 4),
-            ...List.generate(5, (index) => Icon(
-              Icons.star,
-              size: 16,
-              color: index < rating.floor()
-                  ? accentColor
-                  : (index < rating ? accentColor : Colors.grey[300]),
-            )),
-          ],
-        ),
-      ],
-    );
-  }
 }
 
