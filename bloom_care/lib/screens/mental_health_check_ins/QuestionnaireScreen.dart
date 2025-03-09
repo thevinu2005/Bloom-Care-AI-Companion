@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import 'package:bloom_care/screens/mental_health_check_ins/QuestionnaireScreen.dart';
+import 'package:bloom_care/screens/mental_health_check_ins/mental_health_check_ins.dart';
 
 // Circular Progress Painter
 class CircularProgressPainter extends CustomPainter {
@@ -259,6 +259,21 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     });
   }
 
+  Color _getMentalHealthLevelColor() {
+    switch (_mentalHealthLevel) {
+      case "Excellent":
+        return Colors.green;
+      case "Good":
+        return Colors.blue;
+      case "Moderate":
+        return Colors.amber;
+      case "Needs Attention":
+        return Colors.red;
+      default:
+        return Colors.blue;
+    }
+  }
+
   Widget _buildResultsScreen() {
     return Scaffold(
       backgroundColor: const Color(0xFF0F1123),
@@ -273,7 +288,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
             child: Opacity(
               opacity: 0.1,
               child: Image.asset(
-                'assets/background.jpg', // Replace with your image path
+                'assest/background.jpg', // Replace with your image path
                 fit: BoxFit.cover,
               ),
             ),
@@ -331,12 +346,29 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                         children: [
                           const Text(
                             "Score Percentage",
-                            style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+                            style: TextStyle(color: Colors.grey),
                           ),
                           Text(
                             "${_scorePercentage.toInt()}%",
                             style: const TextStyle(
                               color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "Mental Health Level: ",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          Text(
+                            _mentalHealthLevel,
+                            style: TextStyle(
+                              color: _getMentalHealthLevelColor(),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
