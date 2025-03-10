@@ -259,6 +259,45 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     });
   }
 
+  String _getCommentForQuestion(int questionIndex) {
+    final selectedOption = _questions[questionIndex].selectedOption ?? 0;
+    
+    switch (questionIndex) {
+      case 0:
+        return selectedOption == 0 ? "Great emotional regulation!" :
+               selectedOption == 1 ? "Normal emotional patterns." :
+               selectedOption == 2 ? "Consider stress management techniques." :
+               "May benefit from professional support.";
+      case 1:
+        return selectedOption == 0 ? "Excellent sleep habits!" :
+               selectedOption == 1 ? "Good sleep quality." :
+               selectedOption == 2 ? "Consider improving sleep hygiene." :
+               "Sleep issues may need attention.";
+      case 2:
+        return selectedOption == 0 ? "Great balance of enjoyable activities!" :
+               selectedOption == 1 ? "Good engagement with pleasurable activities." :
+               selectedOption == 2 ? "Try to increase frequency of enjoyable activities." :
+               "Finding more joy in daily life may help.";
+      case 3:
+        return selectedOption == 0 ? "Excellent energy levels!" :
+               selectedOption == 1 ? "Good sustainable energy." :
+               selectedOption == 2 ? "Consider energy management techniques." :
+               "Energy levels may need attention.";
+      case 4:
+        return selectedOption == 0 ? "Excellent mindfulness practice!" :
+               selectedOption == 1 ? "Good relaxation habits." :
+               selectedOption == 2 ? "Consider more regular mindfulness practice." :
+               "Adding mindfulness could be beneficial.";
+      default:
+        return "";
+    }
+  }
+
+  int _getPointsForQuestion(int questionIndex) {
+    final selectedOption = _questions[questionIndex].selectedOption ?? 0;
+    return 3 - selectedOption;
+  }
+
   Color _getMentalHealthLevelColor() {
     switch (_mentalHealthLevel) {
       case "Excellent":
@@ -377,6 +416,73 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                     ],
                   ),
                 ),
+                
+                const SizedBox(height: 24),
+                const Text(
+                  "Question Breakdown",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Question Breakdown Cards
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _questions.length,
+                  itemBuilder: (context, index) {
+                    final question = _questions[index];
+                    final selectedOption = question.selectedOption;
+                    
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1D30),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            question.question,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            selectedOption != null ? question.options[selectedOption] : "",
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 255, 255, 255),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _getCommentForQuestion(index),
+                                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                                ),
+                              ),
+                              Text(
+                                "${_getPointsForQuestion(index)} pts",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -409,7 +515,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
             child: Opacity(
               opacity: 0.1,
               child: Image.asset(
-                'assets/background.jpg', // Replace with your image path
+                'assest/background.jpg', 
                 fit: BoxFit.cover,
               ),
             ),
