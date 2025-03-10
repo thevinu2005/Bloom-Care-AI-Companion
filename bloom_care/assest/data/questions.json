@@ -1,0 +1,137 @@
+[
+    {
+      "id": "q1",
+      "text": "How would you rate your overall mood today?",
+      "type": "scale",
+      "emoji": "😊",
+      "category": "mood",
+      "correctAnswer": 4
+    },
+    {
+      "id": "q2",
+      "text": "Have you been feeling stressed or overwhelmed?",
+      "type": "yesNo",
+      "emoji": "😓",
+      "category": "stress",
+      "correctAnswer": 0
+    },
+    {
+      "id": "q3",
+      "text": "How well did you sleep last night?",
+      "type": "scale",
+      "emoji": "😴",
+      "category": "sleep",
+      "correctAnswer": 3
+    },
+    {
+      "id": "q4",
+      "text": "Which of these emotions is most positive?",
+      "type": "multipleChoice",
+      "options": ["Happiness", "Anxiety", "Sadness", "Contentment", "Frustration"],
+      "emoji": "🤔",
+      "category": "emotions",
+      "correctAnswer": 0
+    },
+    {
+      "id": "q5",
+      "text": "What is the recommended amount of sleep for adults?",
+      "type": "multipleChoice",
+      "options": ["4-5 hours", "6-7 hours", "7-9 hours", "10-12 hours"],
+      "emoji": "⚡",
+      "category": "knowledge",
+      "correctAnswer": 2
+    },
+    {
+      "id": "q6",
+      "text": "Regular exercise can help reduce symptoms of depression.",
+      "type": "yesNo",
+      "emoji": "🏃",
+      "category": "knowledge",
+      "correctAnswer": 1
+    },
+    {
+      "id": "q7",
+      "text": "How many minutes of mindfulness meditation is recommended daily?",
+      "type": "multipleChoice",
+      "options": ["5-10 minutes", "10-20 minutes", "30-45 minutes", "At least 60 minutes"],
+      "emoji": "🧠",
+      "category": "knowledge",
+      "correctAnswer": 1
+    },
+    {
+      "id": "q8",
+      "text": "Which of these is NOT a recommended stress management technique?",
+      "type": "multipleChoice",
+      "options": [
+        "Deep breathing",
+        "Progressive muscle relaxation",
+        "Avoiding all social contact",
+        "Physical exercise",
+        "Journaling"
+      ],
+      "emoji": "🧘",
+      "category": "knowledge",
+      "correctAnswer": 2
+    },
+    {
+      "id": "q9",
+      "text": "Drinking alcohol can improve sleep quality.",
+      "type": "yesNo",
+      "emoji": "🤕",
+      "category": "knowledge",
+      "correctAnswer": 0
+    },
+    {
+      "id": "q10",
+      "text": "On a scale of 1-5, how important is social connection for mental health?",
+      "type": "scale",
+      "emoji": "👥",
+      "category": "knowledge",
+      "correctAnswer": 4
+    },
+    {
+      "id": "q11",
+      "text": "How often should you practice self-care activities?",
+      "type": "multipleChoice",
+      "options": ["Daily", "Weekly", "Monthly", "Only when feeling stressed"],
+      "emoji": "🛀",
+      "category": "self-care",
+      "correctAnswer": 0
+    },
+    {
+      "id": "q12",
+      "text": "Which of these is a sign of burnout?",
+      "type": "multipleChoice",
+      "options": ["Occasional tiredness", "Chronic exhaustion", "Normal work stress", "Taking on new projects"],
+      "emoji": "🔥",
+      "category": "burnout",
+      "correctAnswer": 1
+    },
+    {
+      "id": "q13",
+      "text": "Spending time in nature can improve mental wellbeing.",
+      "type": "yesNo",
+      "emoji": "🌳",
+      "category": "wellbeing",
+      "correctAnswer": 1
+    },
+    {
+      "id": "q14",
+      "text": "How would you rate your stress level this week?",
+      "type": "scale",
+      "emoji": "📊",
+      "category": "stress",
+      "correctAnswer": 2
+    },
+    {
+      "id": "q15",
+      "text": "Which activity is most beneficial for reducing anxiety?",
+      "type": "multipleChoice",
+      "options": ["Scrolling social media", "Deep breathing exercises", "Watching the news", "Drinking caffeine"],
+      "emoji": "😰",
+      "category": "anxiety",
+      "correctAnswer": 1
+    }
+  ]
+  
+  
