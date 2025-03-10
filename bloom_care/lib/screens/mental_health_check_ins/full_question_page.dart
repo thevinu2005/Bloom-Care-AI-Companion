@@ -216,19 +216,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
       body: SafeArea(
         child: Column(
           children: [
-            // Custom app bar with improved styling
-            Container(
+            // Custom app bar
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -274,9 +264,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
               ),
             ),
             
-            // Improved animated progress indicator
+            // Animated progress indicator
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -294,7 +284,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                               borderRadius: BorderRadius.circular(5),
                             ),
                           ),
-                          // Animated fill with improved gradient
+                          // Animated fill
                           Container(
                             height: 10,
                             width: MediaQuery.of(context).size.width * 
@@ -320,42 +310,26 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                       );
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "Question ${_currentQuestionIndex + 1}/${_questions.length}",
-                          style: TextStyle(
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
+                      Text(
+                        "Question ${_currentQuestionIndex + 1}/${_questions.length}",
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       TweenAnimationBuilder(
                         tween: Tween<double>(begin: 0, end: (_currentQuestionIndex + 1) / _questions.length * 100),
                         duration: const Duration(milliseconds: 500),
                         builder: (context, double value, child) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: _gradientColors[_currentQuestionIndex % _gradientColors.length].withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              "${value.toInt()}% Complete",
-                              style: TextStyle(
-                                color: _gradientColors[_currentQuestionIndex % _gradientColors.length],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                          return Text(
+                            "${value.toInt()}% Complete",
+                            style: TextStyle(
+                              color: _gradientColors[_currentQuestionIndex % _gradientColors.length],
+                              fontWeight: FontWeight.bold,
                             ),
                           );
                         },
@@ -366,7 +340,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
               ),
             ),
             
-            // Questions PageView with enhanced animations
+            // Questions PageView with animations
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -401,74 +375,60 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Emoji and question with enhanced styling
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                TweenAnimationBuilder(
-                                  tween: Tween<double>(begin: 0, end: 1),
-                                  duration: const Duration(milliseconds: 800),
-                                  curve: Curves.elasticOut,
-                                  builder: (context, double value, child) {
-                                    return Transform.scale(
-                                      scale: value,
-                                      child: Container(
-                                        width: 60,
-                                        height: 60,
-                                        decoration: BoxDecoration(
-                                          color: _gradientColors[index % _gradientColors.length].withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(15),
+                          // Emoji and question
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TweenAnimationBuilder(
+                                tween: Tween<double>(begin: 0, end: 1),
+                                duration: const Duration(milliseconds: 800),
+                                curve: Curves.elasticOut,
+                                builder: (context, double value, child) {
+                                  return Transform.scale(
+                                    scale: value,
+                                    child: Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: _gradientColors[index % _gradientColors.length].withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          question.emoji,
+                                          style: const TextStyle(fontSize: 30),
                                         ),
-                                        child: Center(
-                                          child: Text(
-                                            question.emoji,
-                                            style: const TextStyle(fontSize: 30),
-                                          ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: TweenAnimationBuilder(
+                                  tween: Tween<double>(begin: 0, end: 1),
+                                  duration: const Duration(milliseconds: 600),
+                                  builder: (context, double value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Text(
+                                        question.text,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          height: 1.3,
                                         ),
                                       ),
                                     );
                                   },
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: TweenAnimationBuilder(
-                                    tween: Tween<double>(begin: 0, end: 1),
-                                    duration: const Duration(milliseconds: 600),
-                                    builder: (context, double value, child) {
-                                      return Opacity(
-                                        opacity: value,
-                                        child: Text(
-                                          question.text,
-                                          style: const TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            height: 1.3,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                           
                           const SizedBox(height: 40),
                           
-                          // Different question types with enhanced animations
+                          // Different question types with animations
                           Expanded(
                             child: TweenAnimationBuilder(
                               tween: Tween<double>(begin: 0, end: 1),
@@ -498,19 +458,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
               ),
             ),
             
-            // Enhanced navigation button
-            Container(
+            // Navigation button
+            Padding(
               padding: const EdgeInsets.all(24.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
               child: AnimatedOpacity(
                 opacity: _answers.isNotEmpty && _currentQuestionIndex < _answers.length && _answers[_currentQuestionIndex] != null ? 1.0 : 0.5,
                 duration: const Duration(milliseconds: 300),

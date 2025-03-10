@@ -14,15 +14,10 @@ class QuizWelcomeScreen extends StatefulWidget {
   State<QuizWelcomeScreen> createState() => _QuizWelcomeScreenState();
 }
 
-class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> with SingleTickerProviderStateMixin {
+class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
   bool _isCompleted = false;
   DateTime? _nextRefreshDate;
   bool _isLoading = true;
-  
-  // Animation controller for the button
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _opacityAnimation;
 
   @override
   void initState() {
@@ -33,37 +28,6 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> with SingleTicker
     if (widget.justCompleted == true) {
       _markAsCompleted();
     }
-    
-    // Initialize animation controller
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    
-    // Create scale animation
-    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    
-    // Create opacity animation
-    _opacityAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    
-    // Start the animation and make it repeat
-    _animationController.repeat(reverse: true);
-  }
-  
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
   }
 
   // Load the completion status from shared preferences
@@ -333,77 +297,34 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> with SingleTicker
                 mainAxisSize: MainAxisSize.min, // Use minimum space needed
                 children: [
                   // Get started button - disabled if completed
-                  // Animated button when not completed
-                  _isCompleted 
-                      ? ElevatedButton(
-                          onPressed: null, // Disabled
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey.shade400,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: Colors.grey.shade400,
-                            disabledForegroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          child: const Text(
-                            'Check-in closed until next week',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        )
-                      : AnimatedBuilder(
-                          animation: _animationController,
-                          builder: (context, child) {
-                            return Transform.scale(
-                              scale: _scaleAnimation.value,
-                              child: Opacity(
-                                opacity: _opacityAnimation.value,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(30),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.3 * _opacityAnimation.value),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      // Add a quick animation effect when pressed
-                                      _animationController.stop();
-                                      
-                                      // Navigate to the questionnaire screen
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(builder: (context) => const QuestionnaireScreen()),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(30),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'let begin weekly check-in',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                  ElevatedButton(
+                    onPressed: _isCompleted 
+                        ? null // Disable the button if completed
+                        : () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const QuestionnaireScreen()),
                             );
                           },
-                        ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isCompleted ? Colors.grey.shade400 : Colors.black,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey.shade400, // Grey when disabled
+                      disabledForegroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: Text(
+                      _isCompleted 
+                          ? 'Check-in closed until next week'
+                          : 'let begin weekly check-in',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                   
                   // Re-take option if completed
                   if (_isCompleted)
@@ -478,3 +399,4 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> with SingleTicker
     );
   }
 }
+
