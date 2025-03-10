@@ -1127,6 +1127,122 @@ Future<void> _checkAndHandleExistingCaregivers(Caregiver newCaregiver) async {
                     'You already have an assigned caregiver. Would you like to reassign to ${newCaregiver.name} instead?',
                     textAlign: TextAlign.center,
                     style: TextStyle(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Cancel'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          
+                          // First, notify the current caregiver they're being replaced
+                          await _notifyPreviousCaregiverOfReplacement(assignedCaregiverId);
+                          
+                          // Then send request to the new caregiver
+                          await _toggleCaregiverAssignment(newCaregiver);
+                        },
+                        child: const Text('Reassign'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      return;
+    }
+    
+    // If no assigned caregiver, proceed with normal assignment
+    await _toggleCaregiverAssignment(newCaregiver);
+    
+  } catch (e) {
+    print('Error checking existing caregivers: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+// Method to notify previous caregiver they're being replaced
+Future<void> _notifyPreviousCaregiverOfReplacement(String caregiverId) async {
+  try {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('User not logged in');
+    }
+    
+    // Get elder's data
+    final elderDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+    if (!elderDoc.exists) {
+      throw Exception('Elder profile not found');
+    }
+    
+    final elderData = elderDoc.data()!;
+    final elderName = elderData['name'] ?? 'Unknown Elder';
+    
+    // Send notification to previous caregiver
+    await _firestore
+        .collection('users')
+        .doc(caregiverId)
+        .collection('notifications')
+        .add({
+      'type': 'caregiver_replaced',
+      'title': 'Caregiver Assignment Changed',
+      'message': '$elderName has assigned a different caregiver',
+      'elderName': elderName,
+      'elderId': currentUser.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'color': Colors.orange.value,
+      'textColor': Colors.white.value,
+      'icon': 'swap_horiz',
+      'iconColor': Colors.white.value,
+    });
+    
+    // Update elder's document to remove the previous caregiver
+    List<String> assignedCaregivers = List<String>.from(elderData['assignedCaregivers'] ?? []);
+    assignedCaregivers.remove(caregiverId);
+    
+    await _firestore.collection('users').doc(currentUser.uid).update({
+      'assignedCaregivers': assignedCaregivers,
+      'assignedCaregiver': null, // Clear the primary caregiver field
+    });
+    
+    // Delete the request document for the previous caregiver
+    await _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('caregiver_requests')
+        .doc(caregiverId)
+        .delete();
+    
+  } catch (e) {
+    print('Error notifying previous caregiver: $e');
+    throw e;
+  }
+}
+
+// Update the _buildCaregiverCard method to use the new checkAndHandleExistingCaregivers method
 
         ],
       ),
