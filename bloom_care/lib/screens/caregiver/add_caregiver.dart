@@ -1243,6 +1243,145 @@ Future<void> _notifyPreviousCaregiverOfReplacement(String caregiverId) async {
 }
 
 // Update the _buildCaregiverCard method to use the new checkAndHandleExistingCaregivers method
+Widget _buildCaregiverCard(Caregiver caregiver) {
+  return Card(
+    margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+    color: const Color(0xFFE6F0FF),
+    elevation: 0,
+    child: Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: Colors.grey.shade300,
+            backgroundImage: caregiver.imageUrl != null && caregiver.imageUrl!.isNotEmpty
+                ? NetworkImage(caregiver.imageUrl!) as ImageProvider
+                : null,
+            child: caregiver.imageUrl == null || caregiver.imageUrl!.isEmpty
+                ? Text(
+                    caregiver.name.isNotEmpty ? caregiver.name[0].toUpperCase() : '?',
+                    style: TextStyle(fontSize: 20, color: Colors.grey.shade700),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 16.0),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  caregiver.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.0,
+                  ),
+                ),
+                Text(
+                  caregiver.userType == 'caregiver' ? 'Caregiver' : 'Family Member',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 12.0,
+                  ),
+                ),
+                if (caregiver.isAdded)
+                  FutureBuilder<DocumentSnapshot>(
+                    future: _firestore
+                        .collection('users')
+                        .doc(_auth.currentUser?.uid)
+                        .collection('caregiver_requests')
+                        .doc(caregiver.id)
+                        .get(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Text(
+                          'Checking status...',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 11.0,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        );
+                      }
+                      
+                      if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+                        return const Text(
+                          'Added',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 11.0,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      }
+                      
+                      final data = snapshot.data!.data() as Map<String, dynamic>?;
+                      final status = data?['status'] as String? ?? 'pending';
+                      
+                      if (status == 'pending') {
+                        return const Text(
+                          'Request Pending',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontSize: 11.0,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      } else if (status == 'accepted') {
+                        return const Text(
+                          'Request Accepted',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 11.0,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      } else {
+                        return const Text(
+                          'Request Declined',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 11.0,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: () => _showCaregiverProfile(caregiver),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFFF80),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                ),
+                child: const Text('View'),
+              ),
+              const SizedBox(width: 8.0),
+              ElevatedButton(
+                onPressed: caregiver.isAdded 
+                    ? () => _showAlreadyAddedDialog(caregiver) 
+                    : () => _checkAndHandleExistingCaregivers(caregiver),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      caregiver.isAdded ? Colors.grey : const Color(0xFF80FF80),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                ),
+                child: Text(caregiver.isAdded ? 'Added' : 'Add +'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
         ],
       ),
