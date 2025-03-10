@@ -1383,6 +1383,127 @@ Widget _buildCaregiverCard(Caregiver caregiver) {
   );
 }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFE6F0FF),
+        elevation: 0,
+        title: const Text(
+          'Add Your Caregiver',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: Icon(
+              Icons.people_alt_outlined,
+              color: Colors.blue,
+            ),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            color: const Color(0xFFE6F0FF),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search Caregiver',
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
+                suffixIcon: Icon(Icons.search),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _errorMessage != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Error loading caregivers',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(_errorMessage!),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: _loadCaregiversFromFirebase,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _isSearching
+                        ? _filteredCaregivers.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'No caregivers found matching your search',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 16.0,
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: _filteredCaregivers.length,
+                                itemBuilder: (context, index) {
+                                  final caregiver = _filteredCaregivers[index];
+                                  return _buildCaregiverCard(caregiver);
+                                },
+                              )
+                        : _allCaregivers.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.people_alt_outlined,
+                                      size: 64,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'No caregivers or family members available',
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 16.0,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: _allCaregivers.length,
+                                itemBuilder: (context, index) {
+                                  final caregiver = _allCaregivers[index];
+                                  return _buildCaregiverCard(caregiver);
+                                },
+                              ),
+          ),
         ],
       ),
       bottomNavigationBar: const BottomNav(currentIndex: -1), // Assuming 2 is the index for the caregiver/settings tab
