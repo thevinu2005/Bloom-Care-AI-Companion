@@ -72,56 +72,11 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     // Convert JSON to Question objects
     List<Question> allQuestions = jsonData.map((json) => Question.fromJson(json)).toList();
     
-    // Get the current week number to use as a seed for randomization
-    final DateTime now = DateTime.now();
-    final int weekOfYear = _getWeekOfYear(now);
-    final int year = now.year;
+    // Randomize the questions
+    allQuestions.shuffle(math.Random());
     
-    // Create a deterministic random generator based on the week and year
-    // This ensures the same questions appear for all users in the same week
-    final random = math.Random(weekOfYear + (year * 100));
-    
-    // Shuffle the questions with our seeded random generator
-    _customShuffle(allQuestions, random);
-    
-    // Group questions by category to ensure variety
-    Map<String, List<Question>> questionsByCategory = {};
-    
-    for (var question in allQuestions) {
-      if (!questionsByCategory.containsKey(question.category)) {
-        questionsByCategory[question.category] = [];
-      }
-      questionsByCategory[question.category]!.add(question);
-    }
-    
-    // Select questions from each category to ensure a balanced assessment
-    List<Question> selectedQuestions = [];
-    
-    // Try to get at least one question from each category
-    questionsByCategory.forEach((category, questions) {
-      if (questions.isNotEmpty) {
-        selectedQuestions.add(questions.first);
-        questions.removeAt(0);
-      }
-    });
-    
-    // If we need more questions to reach our target count (e.g., 5)
-    // Add more from the remaining pool, maintaining the weekly consistency
-    List<Question> remainingQuestions = [];
-    questionsByCategory.forEach((category, questions) {
-      remainingQuestions.addAll(questions);
-    });
-    
-    _customShuffle(remainingQuestions, random);
-    
-    // Add remaining questions until we reach our target count
-    while (selectedQuestions.length < 5 && remainingQuestions.isNotEmpty) {
-      selectedQuestions.add(remainingQuestions.first);
-      remainingQuestions.removeAt(0);
-    }
-    
-    // Final shuffle of the selected questions to randomize their order
-    _customShuffle(selectedQuestions, random);
+    // Take a subset of questions (e.g., 5 random questions)
+    final selectedQuestions = allQuestions.take(5).toList();
     
     setState(() {
       _questions = selectedQuestions;
@@ -148,27 +103,6 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     });
   }
 }
-
-  // Helper method to get the week number of the year
-  int _getWeekOfYear(DateTime date) {
-    // The first day of the year
-    final firstDayOfYear = DateTime(date.year, 1, 1);
-    // Days from the first day of the year
-    final daysFromFirstDay = date.difference(firstDayOfYear).inDays;
-    // Calculate the week number (0-indexed)
-    return (daysFromFirstDay / 7).floor();
-  }
-  
-  // Custom shuffle method that uses a provided random generator
-  void _customShuffle(List<Question> list, math.Random random) {
-    for (int i = list.length - 1; i > 0; i--) {
-      int j = random.nextInt(i + 1);
-      // Swap elements
-      Question temp = list[i];
-      list[i] = list[j];
-      list[j] = temp;
-    }
-  }
 
   @override
   void dispose() {
@@ -282,9 +216,19 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
       body: SafeArea(
         child: Column(
           children: [
-            // Custom app bar
-            Padding(
+            // Custom app bar with improved styling
+            Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -330,9 +274,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
               ),
             ),
             
-            // Animated progress indicator
+            // Improved animated progress indicator
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -350,7 +294,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                               borderRadius: BorderRadius.circular(5),
                             ),
                           ),
-                          // Animated fill
+                          // Animated fill with improved gradient
                           Container(
                             height: 10,
                             width: MediaQuery.of(context).size.width * 
@@ -376,26 +320,42 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                       );
                     },
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Question ${_currentQuestionIndex + 1}/${_questions.length}",
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          "Question ${_currentQuestionIndex + 1}/${_questions.length}",
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                       TweenAnimationBuilder(
                         tween: Tween<double>(begin: 0, end: (_currentQuestionIndex + 1) / _questions.length * 100),
                         duration: const Duration(milliseconds: 500),
                         builder: (context, double value, child) {
-                          return Text(
-                            "${value.toInt()}% Complete",
-                            style: TextStyle(
-                              color: _gradientColors[_currentQuestionIndex % _gradientColors.length],
-                              fontWeight: FontWeight.bold,
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _gradientColors[_currentQuestionIndex % _gradientColors.length].withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              "${value.toInt()}% Complete",
+                              style: TextStyle(
+                                color: _gradientColors[_currentQuestionIndex % _gradientColors.length],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                           );
                         },
@@ -406,7 +366,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
               ),
             ),
             
-            // Questions PageView with animations
+            // Questions PageView with enhanced animations
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -441,60 +401,74 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Emoji and question
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              TweenAnimationBuilder(
-                                tween: Tween<double>(begin: 0, end: 1),
-                                duration: const Duration(milliseconds: 800),
-                                curve: Curves.elasticOut,
-                                builder: (context, double value, child) {
-                                  return Transform.scale(
-                                    scale: value,
-                                    child: Container(
-                                      width: 60,
-                                      height: 60,
-                                      decoration: BoxDecoration(
-                                        color: _gradientColors[index % _gradientColors.length].withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          question.emoji,
-                                          style: const TextStyle(fontSize: 30),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: TweenAnimationBuilder(
+                          // Emoji and question with enhanced styling
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TweenAnimationBuilder(
                                   tween: Tween<double>(begin: 0, end: 1),
-                                  duration: const Duration(milliseconds: 600),
+                                  duration: const Duration(milliseconds: 800),
+                                  curve: Curves.elasticOut,
                                   builder: (context, double value, child) {
-                                    return Opacity(
-                                      opacity: value,
-                                      child: Text(
-                                        question.text,
-                                        style: const TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          height: 1.3,
+                                    return Transform.scale(
+                                      scale: value,
+                                      child: Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          color: _gradientColors[index % _gradientColors.length].withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(15),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            question.emoji,
+                                            style: const TextStyle(fontSize: 30),
+                                          ),
                                         ),
                                       ),
                                     );
                                   },
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: TweenAnimationBuilder(
+                                    tween: Tween<double>(begin: 0, end: 1),
+                                    duration: const Duration(milliseconds: 600),
+                                    builder: (context, double value, child) {
+                                      return Opacity(
+                                        opacity: value,
+                                        child: Text(
+                                          question.text,
+                                          style: const TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.3,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           
                           const SizedBox(height: 40),
                           
-                          // Different question types with animations
+                          // Different question types with enhanced animations
                           Expanded(
                             child: TweenAnimationBuilder(
                               tween: Tween<double>(begin: 0, end: 1),
@@ -524,9 +498,19 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
               ),
             ),
             
-            // Navigation button
-            Padding(
+            // Enhanced navigation button
+            Container(
               padding: const EdgeInsets.all(24.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
               child: AnimatedOpacity(
                 opacity: _answers.isNotEmpty && _currentQuestionIndex < _answers.length && _answers[_currentQuestionIndex] != null ? 1.0 : 0.5,
                 duration: const Duration(milliseconds: 300),
