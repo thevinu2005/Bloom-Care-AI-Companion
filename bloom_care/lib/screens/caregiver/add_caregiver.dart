@@ -965,6 +965,169 @@ Future<void> _removeCaregiverAssignment(Caregiver caregiver) async {
   }
 }
 
+// Method to resend a request after it was declined
+Future<void> _resendCaregiverRequest(Caregiver caregiver) async {
+  try {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('User not logged in');
+    }
+    
+    // Get elder's data
+    final elderDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+    if (!elderDoc.exists) {
+      throw Exception('Elder profile not found');
+    }
+    
+    final elderData = elderDoc.data()!;
+    final elderName = elderData['name'] ?? 'Unknown Elder';
+    final elderProfileImage = elderData['profileImage'] ?? 'assets/default_avatar.png';
+    
+    // Delete the old request
+    await _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('caregiver_requests')
+        .doc(caregiver.id)
+        .delete();
+    
+    // Create a new request in the caregiver's notifications
+    await _firestore
+        .collection('users')
+        .doc(caregiver.id)
+        .collection('notifications')
+        .add({
+      'type': 'caregiver_request',
+      'title': 'New Caregiver Request',
+      'message': '$elderName is requesting to assign you as their caregiver again',
+      'elderName': elderName,
+      'elderId': currentUser.uid,
+      'elderImage': elderProfileImage,
+      'status': 'pending',
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'color': const Color(0xFFE2D9F3).value,
+      'textColor': const Color(0xFF6A359C).value,
+      'icon': 'person_add',
+      'iconColor': Colors.purple.value,
+    });
+    
+    // Create a new request document in elder's collection
+    await _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('caregiver_requests')
+        .doc(caregiver.id)
+        .set({
+      'caregiverId': caregiver.id,
+      'caregiverName': caregiver.name,
+      'status': 'pending',
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    
+    // Update local state
+    setState(() {
+      final index = _allCaregivers.indexWhere((c) => c.id == caregiver.id);
+      if (index != -1) {
+        _allCaregivers[index] = Caregiver(
+          id: caregiver.id,
+          name: caregiver.name,
+          imageUrl: caregiver.imageUrl,
+          isAdded: true,
+          userType: caregiver.userType,
+          createdAt: caregiver.createdAt,
+          dateOfBirth: caregiver.dateOfBirth,
+        );
+      }
+      
+      final filteredIndex = _filteredCaregivers.indexWhere((c) => c.id == caregiver.id);
+      if (filteredIndex != -1) {
+        _filteredCaregivers[filteredIndex] = _allCaregivers[index];
+      }
+    });
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('New request sent to ${caregiver.name}'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    
+  } catch (e) {
+    print('Error resending caregiver request: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+// Add a method to handle reassigning to a new caregiver when one is already assigned
+Future<void> _checkAndHandleExistingCaregivers(Caregiver newCaregiver) async {
+  try {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('User not logged in');
+    }
+    
+    // Get elder's data
+    final elderDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+    if (!elderDoc.exists) {
+      throw Exception('Elder profile not found');
+    }
+    
+    final elderData = elderDoc.data()!;
+    
+    // Check if there's an assigned caregiver
+    final String? assignedCaregiverId = elderData['assignedCaregiver'] as String?;
+    final List<String> assignedCaregivers = List<String>.from(elderData['assignedCaregivers'] ?? []);
+    
+    if (assignedCaregiverId != null && assignedCaregiverId.isNotEmpty) {
+      // There's already an assigned caregiver
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.orange,
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.warning,
+                      color: Colors.orange,
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Caregiver Already Assigned',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'You already have an assigned caregiver. Would you like to reassign to ${newCaregiver.name} instead?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+
         ],
       ),
       bottomNavigationBar: const BottomNav(currentIndex: -1), // Assuming 2 is the index for the caregiver/settings tab
