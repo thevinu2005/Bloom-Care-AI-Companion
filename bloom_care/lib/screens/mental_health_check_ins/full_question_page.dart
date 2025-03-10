@@ -72,11 +72,56 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     // Convert JSON to Question objects
     List<Question> allQuestions = jsonData.map((json) => Question.fromJson(json)).toList();
     
-    // Randomize the questions
-    allQuestions.shuffle(math.Random());
+    // Get the current week number to use as a seed for randomization
+    final DateTime now = DateTime.now();
+    final int weekOfYear = _getWeekOfYear(now);
+    final int year = now.year;
     
-    // Take a subset of questions (e.g., 5 random questions)
-    final selectedQuestions = allQuestions.take(5).toList();
+    // Create a deterministic random generator based on the week and year
+    // This ensures the same questions appear for all users in the same week
+    final random = math.Random(weekOfYear + (year * 100));
+    
+    // Shuffle the questions with our seeded random generator
+    _customShuffle(allQuestions, random);
+    
+    // Group questions by category to ensure variety
+    Map<String, List<Question>> questionsByCategory = {};
+    
+    for (var question in allQuestions) {
+      if (!questionsByCategory.containsKey(question.category)) {
+        questionsByCategory[question.category] = [];
+      }
+      questionsByCategory[question.category]!.add(question);
+    }
+    
+    // Select questions from each category to ensure a balanced assessment
+    List<Question> selectedQuestions = [];
+    
+    // Try to get at least one question from each category
+    questionsByCategory.forEach((category, questions) {
+      if (questions.isNotEmpty) {
+        selectedQuestions.add(questions.first);
+        questions.removeAt(0);
+      }
+    });
+    
+    // If we need more questions to reach our target count (e.g., 5)
+    // Add more from the remaining pool, maintaining the weekly consistency
+    List<Question> remainingQuestions = [];
+    questionsByCategory.forEach((category, questions) {
+      remainingQuestions.addAll(questions);
+    });
+    
+    _customShuffle(remainingQuestions, random);
+    
+    // Add remaining questions until we reach our target count
+    while (selectedQuestions.length < 5 && remainingQuestions.isNotEmpty) {
+      selectedQuestions.add(remainingQuestions.first);
+      remainingQuestions.removeAt(0);
+    }
+    
+    // Final shuffle of the selected questions to randomize their order
+    _customShuffle(selectedQuestions, random);
     
     setState(() {
       _questions = selectedQuestions;
@@ -103,6 +148,27 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     });
   }
 }
+
+  // Helper method to get the week number of the year
+  int _getWeekOfYear(DateTime date) {
+    // The first day of the year
+    final firstDayOfYear = DateTime(date.year, 1, 1);
+    // Days from the first day of the year
+    final daysFromFirstDay = date.difference(firstDayOfYear).inDays;
+    // Calculate the week number (0-indexed)
+    return (daysFromFirstDay / 7).floor();
+  }
+  
+  // Custom shuffle method that uses a provided random generator
+  void _customShuffle(List<Question> list, math.Random random) {
+    for (int i = list.length - 1; i > 0; i--) {
+      int j = random.nextInt(i + 1);
+      // Swap elements
+      Question temp = list[i];
+      list[i] = list[j];
+      list[j] = temp;
+    }
+  }
 
   @override
   void dispose() {
