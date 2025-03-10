@@ -229,7 +229,10 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text("Exit"),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          title: const Text("Exit Check-in?"),
                           content: const Text("Your progress will not be saved."),
                           actions: [
                             TextButton(
