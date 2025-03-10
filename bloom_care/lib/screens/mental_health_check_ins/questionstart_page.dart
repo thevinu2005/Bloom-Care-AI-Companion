@@ -380,7 +380,7 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> with SingleTicker
                                       
                                       // Navigate to the questionnaire screen
                                       Navigator.of(context).push(
-                                        MaterialPageRoute(builder: (context) => const MentalHealthStartPage()),
+                                        MaterialPageRoute(builder: (context) => const QuestionnaireScreen()),
                                       );
                                     },
                                     style: ElevatedButton.styleFrom(
