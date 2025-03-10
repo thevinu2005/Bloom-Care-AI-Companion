@@ -685,8 +685,286 @@ void _showAlreadyAddedDialog(Caregiver caregiver) {
                         TextButton(
                           onPressed: () {
                             Navigator.of(context).pop();
+                          },
+                          child: const Text('Keep Current'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.blue,
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _removeCaregiverAssignment(caregiver);
+                          },
+                          child: const Text('Remove Caregiver'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          } else {
+            // Show dialog for declined request with option to send again
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.red,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.cancel,
+                        color: Colors.red,
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Request Declined',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '${caregiver.name} has declined your previous request. Would you like to send a new request?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('Cancel'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.blue,
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _resendCaregiverRequest(caregiver);
+                          },
+                          child: const Text('Send New Request'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        },
+      );
+    },
+  );
+}
+
+// Add these new methods to handle the different actions
+
+// Method to cancel a pending caregiver request
+Future<void> _cancelCaregiverRequest(Caregiver caregiver) async {
+  try {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('User not logged in');
+    }
+    
+    // Delete the request from elder's collection
+    await _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('caregiver_requests')
+        .doc(caregiver.id)
+        .delete();
+    
+    // Get elder's data for notification
+    final elderDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+    if (!elderDoc.exists) {
+      throw Exception('Elder profile not found');
+    }
+    
+    final elderData = elderDoc.data()!;
+    final elderName = elderData['name'] ?? 'Unknown Elder';
+    
+    // Send notification to caregiver about cancellation
+    await _firestore
+        .collection('users')
+        .doc(caregiver.id)
+        .collection('notifications')
+        .add({
+      'type': 'caregiver_request_canceled',
+      'title': 'Request Canceled',
+      'message': '$elderName has canceled their caregiver request',
+      'elderName': elderName,
+      'elderId': currentUser.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'color': Colors.grey.value,
+      'textColor': Colors.white.value,
+      'icon': 'cancel',
+      'iconColor': Colors.red.value,
+    });
+    
+    // Update local state
+    setState(() {
+      final index = _allCaregivers.indexWhere((c) => c.id == caregiver.id);
+      if (index != -1) {
+        _allCaregivers[index] = Caregiver(
+          id: caregiver.id,
+          name: caregiver.name,
+          imageUrl: caregiver.imageUrl,
+          isAdded: false,
+          userType: caregiver.userType,
+          createdAt: caregiver.createdAt,
+          dateOfBirth: caregiver.dateOfBirth,
+        );
+      }
       
-          ),
+      final filteredIndex = _filteredCaregivers.indexWhere((c) => c.id == caregiver.id);
+      if (filteredIndex != -1) {
+        _filteredCaregivers[filteredIndex] = _allCaregivers[index];
+      }
+    });
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Request to ${caregiver.name} has been canceled'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+    
+  } catch (e) {
+    print('Error canceling caregiver request: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+// Method to remove an accepted caregiver
+Future<void> _removeCaregiverAssignment(Caregiver caregiver) async {
+  try {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('User not logged in');
+    }
+    
+    // Get elder's data
+    final elderDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+    if (!elderDoc.exists) {
+      throw Exception('Elder profile not found');
+    }
+    
+    final elderData = elderDoc.data()!;
+    final elderName = elderData['name'] ?? 'Unknown Elder';
+    
+    // Remove caregiver from assignedCaregivers list
+    List<String> assignedCaregivers = List<String>.from(elderData['assignedCaregivers'] ?? []);
+    assignedCaregivers.remove(caregiver.id);
+    
+    // Update elder's document
+    await _firestore.collection('users').doc(currentUser.uid).update({
+      'assignedCaregivers': assignedCaregivers,
+      'assignedCaregiver': null, // Also clear the primary caregiver field if it exists
+    });
+    
+    // Delete the request document
+    await _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('caregiver_requests')
+        .doc(caregiver.id)
+        .delete();
+    
+    // Send notification to caregiver about removal
+    await _firestore
+        .collection('users')
+        .doc(caregiver.id)
+        .collection('notifications')
+        .add({
+      'type': 'caregiver_removed',
+      'title': 'Caregiver Assignment Removed',
+      'message': '$elderName has removed you as their caregiver',
+      'elderName': elderName,
+      'elderId': currentUser.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'color': Colors.red.value,
+      'textColor': Colors.white.value,
+      'icon': 'person_remove',
+      'iconColor': Colors.white.value,
+    });
+    
+    // Update local state
+    setState(() {
+      final index = _allCaregivers.indexWhere((c) => c.id == caregiver.id);
+      if (index != -1) {
+        _allCaregivers[index] = Caregiver(
+          id: caregiver.id,
+          name: caregiver.name,
+          imageUrl: caregiver.imageUrl,
+          isAdded: false,
+          userType: caregiver.userType,
+          createdAt: caregiver.createdAt,
+          dateOfBirth: caregiver.dateOfBirth,
+        );
+      }
+      
+      final filteredIndex = _filteredCaregivers.indexWhere((c) => c.id == caregiver.id);
+      if (filteredIndex != -1) {
+        _filteredCaregivers[filteredIndex] = _allCaregivers[index];
+      }
+    });
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${caregiver.name} has been removed as your caregiver'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+    
+  } catch (e) {
+    print('Error removing caregiver assignment: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
         ],
       ),
       bottomNavigationBar: const BottomNav(currentIndex: -1), // Assuming 2 is the index for the caregiver/settings tab
