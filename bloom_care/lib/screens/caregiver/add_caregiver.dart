@@ -534,6 +534,158 @@ class _AddCaregiverScreenState extends State<AddCaregiverScreen> {
   }
 
   // Replace the _showAlreadyAddedDialog method with this updated version
+void _showAlreadyAddedDialog(Caregiver caregiver) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return FutureBuilder<DocumentSnapshot>(
+        future: _firestore
+            .collection('users')
+            .doc(_auth.currentUser?.uid)
+            .collection('caregiver_requests')
+            .doc(caregiver.id)
+            .get(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Dialog(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Checking request status...'),
+                  ],
+                ),
+              ),
+            );
+          }
+          
+          final data = snapshot.data?.data() as Map<String, dynamic>?;
+          final status = data?['status'] as String? ?? 'pending';
+          
+          if (status == 'pending') {
+            // Show dialog for pending request with option to cancel
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.orange,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.pending_actions,
+                        color: Colors.orange,
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Pending Request',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'You have already sent a request to ${caregiver.name}. Would you like to cancel this request?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('Keep Waiting'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.blue,
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _cancelCaregiverRequest(caregiver);
+                          },
+                          child: const Text('Cancel Request'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          } else if (status == 'accepted') {
+            // Show dialog for accepted request with option to reassign
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.green,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Caregiver Already Assigned',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '${caregiver.name} is already your assigned caregiver. Would you like to remove them?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+      
           ),
         ],
       ),
