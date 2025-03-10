@@ -673,6 +673,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                 Center(
                   child: ElevatedButton.icon(
                     onPressed: () {
+                      Navigator.of(context).pop();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color.fromARGB(255, 69, 68, 68),
