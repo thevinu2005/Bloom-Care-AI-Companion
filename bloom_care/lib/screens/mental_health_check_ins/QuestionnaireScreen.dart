@@ -68,6 +68,21 @@ class QuestionnaireModel {
   });
 }
 
+// Wellness Plan Model
+class WellnessPlanItem {
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+
+  WellnessPlanItem({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+  });
+}
+
 // Main Questionnaire Page
 class QuestionnaireScreen extends StatefulWidget {
   const QuestionnaireScreen({super.key});
@@ -88,6 +103,12 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
   int _mentalHealthScore = 0;
   double _scorePercentage = 0.0;
   String _mentalHealthLevel = "Moderate";
+  
+  // Question breakdown
+  List<Map<String, dynamic>> _questionBreakdown = [];
+  
+  // Wellness plan
+  List<WellnessPlanItem> _wellnessPlan = [];
   
   final List<QuestionnaireModel> _questions = [
     QuestionnaireModel(
@@ -174,26 +195,77 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
   void _calculateResults() {
     // Calculate a score based on answers
     int score = 0;
+    _questionBreakdown = [];
 
     // Assign points based on emotional overwhelm (Q1)
     final emotionalOverwhelm = _questions[0].selectedOption ?? 0;
-    score += 3 - emotionalOverwhelm; // Rarely (3pts) to Almost always (0pts)
+    final emotionalScore = 3 - emotionalOverwhelm; // Rarely (3pts) to Almost always (0pts)
+    score += emotionalScore;
+    _questionBreakdown.add({
+      'question': _questions[0].question,
+      'answer': _questions[0].options[emotionalOverwhelm],
+      'score': emotionalScore,
+      'maxScore': 3,
+      'feedback': emotionalScore <= 1 
+          ? 'Consider practicing emotional regulation techniques.'
+          : 'Youre managing your emotions well.',
+    });
 
     // Assign points based on sleep quality (Q2)
     final sleepQuality = _questions[1].selectedOption ?? 0;
-    score += 3 - sleepQuality; // Excellent (3pts) to Poor (0pts)
+    final sleepScore = 3 - sleepQuality; // Excellent (3pts) to Poor (0pts)
+    score += sleepScore;
+    _questionBreakdown.add({
+      'question': _questions[1].question,
+      'answer': _questions[1].options[sleepQuality],
+      'score': sleepScore,
+      'maxScore': 3,
+      'feedback': sleepScore <= 1 
+          ? 'Improving sleep habits could benefit your mental health.'
+          : 'Your sleep quality is supporting your mental health.',
+    });
 
     // Assign points based on enjoyable activities (Q3)
     final enjoyableActivities = _questions[2].selectedOption ?? 0;
-    score += 3 - enjoyableActivities; // Daily (3pts) to Rarely (0pts)
+    final activitiesScore = 3 - enjoyableActivities; // Daily (3pts) to Rarely (0pts)
+    score += activitiesScore;
+    _questionBreakdown.add({
+      'question': _questions[2].question,
+      'answer': _questions[2].options[enjoyableActivities],
+      'score': activitiesScore,
+      'maxScore': 3,
+      'feedback': activitiesScore <= 1 
+          ? 'Try to incorporate more activities you enjoy into your routine.'
+          : 'Youre doing well at engaging in enjoyable activities.',
+    });
 
     // Assign points based on energy levels (Q4)
     final energyLevels = _questions[3].selectedOption ?? 0;
-    score += 3 - energyLevels; // High energy (3pts) to Very low energy (0pts)
+    final energyScore = 3 - energyLevels; // High energy (3pts) to Very low energy (0pts)
+    score += energyScore;
+    _questionBreakdown.add({
+      'question': _questions[3].question,
+      'answer': _questions[3].options[energyLevels],
+      'score': energyScore,
+      'maxScore': 3,
+      'feedback': energyScore <= 1 
+          ? 'Consider factors that might be affecting your energy levels.'
+          : 'Your energy levels are supporting your mental wellbeing.',
+    });
 
     // Assign points based on mindfulness practice (Q5)
     final mindfulnessPractice = _questions[4].selectedOption ?? 0;
-    score += 3 - mindfulnessPractice; // Daily (3pts) to Never (0pts)
+    final mindfulnessScore = 3 - mindfulnessPractice; // Daily (3pts) to Never (0pts)
+    score += mindfulnessScore;
+    _questionBreakdown.add({
+      'question': _questions[4].question,
+      'answer': _questions[4].options[mindfulnessPractice],
+      'score': mindfulnessScore,
+      'maxScore': 3,
+      'feedback': mindfulnessScore <= 1 
+          ? 'Incorporating mindfulness practices could improve your mental health.'
+          : 'Your mindfulness practice is benefiting your mental health.',
+    });
 
     // Calculate percentage
     final percentage = (score / 15) * 100;
@@ -204,10 +276,79 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     else if (percentage >= 60) mentalHealthLevelText = "Good";
     else if (percentage <= 30) mentalHealthLevelText = "Needs Attention";
 
+    // Generate wellness plan based on responses
+    _generateWellnessPlan();
+
     setState(() {
       _mentalHealthScore = score;
       _scorePercentage = percentage;
       _mentalHealthLevel = mentalHealthLevelText;
+    });
+  }
+
+  void _generateWellnessPlan() {
+    List<WellnessPlanItem> plan = [];
+    
+    // Check emotional regulation (Q1)
+    if ((_questions[0].selectedOption ?? 0) >= 2) { // Often or Almost always
+      plan.add(WellnessPlanItem(
+        title: "Emotional Regulation",
+        description: "Practice deep breathing exercises for 5 minutes daily to help manage overwhelming emotions.",
+        icon: Icons.favorite,
+        color: const Color.fromARGB(255, 255, 255, 255),
+      ));
+    }
+    
+    // Check sleep quality (Q2)
+    if ((_questions[1].selectedOption ?? 0) >= 2) { // Fair or Poor
+      plan.add(WellnessPlanItem(
+        title: "Sleep Improvement",
+        description: "Establish a consistent sleep schedule and avoid screens 1 hour before bedtime.",
+        icon: Icons.nightlight_round,
+        color: const Color.fromARGB(255, 255, 255, 255),
+      ));
+    }
+    
+    // Check enjoyable activities (Q3)
+    if ((_questions[2].selectedOption ?? 0) >= 2) { // Once a week or Rarely
+      plan.add(WellnessPlanItem(
+        title: "Enjoyable Activities",
+        description: "Schedule at least 30 minutes daily for activities you enjoy to boost your mood.",
+        icon: Icons.sports_esports,
+        color: const Color.fromARGB(255, 255, 255, 255),
+      ));
+    }
+    
+    // Check energy levels (Q4)
+    if ((_questions[3].selectedOption ?? 0) >= 2) { // Low or Very low energy
+      plan.add(WellnessPlanItem(
+        title: "Energy Boosting",
+        description: "Incorporate light physical activity like walking for 15-20 minutes daily to increase energy levels.",
+        icon: Icons.bolt,
+        color: const Color.fromARGB(255, 255, 255, 255),
+      ));
+    }
+    
+    // Check mindfulness practice (Q5)
+    if ((_questions[4].selectedOption ?? 0) >= 2) { // Occasionally or Never
+      plan.add(WellnessPlanItem(
+        title: "Mindfulness Practice",
+        description: "Start with 5 minutes of mindfulness meditation daily using a guided app.",
+        icon: Icons.spa,
+        color: const Color.fromARGB(255, 255, 255, 255),
+      ));
+    }
+    
+    // Add a general wellness tip for everyone
+    plan.add(WellnessPlanItem(
+      title: "Social Connection",
+      description: "Maintain regular contact with friends and family to support your mental wellbeing.",
+      icon: Icons.people,
+      color: const Color.fromARGB(255, 255, 255, 255),
+    ));
+    
+    setState(() {
+      _wellnessPlan = plan;
     });
   }
 
@@ -259,45 +400,6 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     });
   }
 
-  String _getCommentForQuestion(int questionIndex) {
-    final selectedOption = _questions[questionIndex].selectedOption ?? 0;
-    
-    switch (questionIndex) {
-      case 0:
-        return selectedOption == 0 ? "Great emotional regulation!" :
-               selectedOption == 1 ? "Normal emotional patterns." :
-               selectedOption == 2 ? "Consider stress management techniques." :
-               "May benefit from professional support.";
-      case 1:
-        return selectedOption == 0 ? "Excellent sleep habits!" :
-               selectedOption == 1 ? "Good sleep quality." :
-               selectedOption == 2 ? "Consider improving sleep hygiene." :
-               "Sleep issues may need attention.";
-      case 2:
-        return selectedOption == 0 ? "Great balance of enjoyable activities!" :
-               selectedOption == 1 ? "Good engagement with pleasurable activities." :
-               selectedOption == 2 ? "Try to increase frequency of enjoyable activities." :
-               "Finding more joy in daily life may help.";
-      case 3:
-        return selectedOption == 0 ? "Excellent energy levels!" :
-               selectedOption == 1 ? "Good sustainable energy." :
-               selectedOption == 2 ? "Consider energy management techniques." :
-               "Energy levels may need attention.";
-      case 4:
-        return selectedOption == 0 ? "Excellent mindfulness practice!" :
-               selectedOption == 1 ? "Good relaxation habits." :
-               selectedOption == 2 ? "Consider more regular mindfulness practice." :
-               "Adding mindfulness could be beneficial.";
-      default:
-        return "";
-    }
-  }
-
-  int _getPointsForQuestion(int questionIndex) {
-    final selectedOption = _questions[questionIndex].selectedOption ?? 0;
-    return 3 - selectedOption;
-  }
-
   Color _getMentalHealthLevelColor() {
     switch (_mentalHealthLevel) {
       case "Excellent":
@@ -327,7 +429,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
             child: Opacity(
               opacity: 0.1,
               child: Image.asset(
-                'assest/background.jpg', // Replace with your image path
+                'assest/background.jpg',
                 fit: BoxFit.cover,
               ),
             ),
@@ -418,71 +520,154 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                 ),
                 
                 const SizedBox(height: 24),
+                
+                // Question Breakdown Section
                 const Text(
                   "Question Breakdown",
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 
-                // Question Breakdown Cards
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _questions.length,
-                  itemBuilder: (context, index) {
-                    final question = _questions[index];
-                    final selectedOption = question.selectedOption;
-                    
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A1D30),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            question.question,
-                            style: const TextStyle(color: Colors.white),
+                // Question breakdown cards
+                ...List.generate(_questionBreakdown.length, (index) {
+                  final item = _questionBreakdown[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1D30),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Q${index + 1}: ${item['question']}",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            selectedOption != null ? question.options[selectedOption] : "",
-                            style: const TextStyle(
-                              color: Color.fromARGB(255, 255, 255, 255),
-                              fontWeight: FontWeight.bold,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Your answer: ${item['answer']}",
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              "Score: ${item['score']}/${item['maxScore']}",
+                              style: const TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _getCommentForQuestion(index),
-                                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                            const Spacer(),
+                            Container(
+                              width: 100,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(3),
+                                color: Colors.grey[700],
+                              ),
+                              child: FractionallySizedBox(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: item['score'] / item['maxScore'],
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(3),
+                                    color: Colors.purple,
+                                  ),
                                 ),
                               ),
-                              Text(
-                                "${_getPointsForQuestion(index)} pts",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item['feedback'],
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 12,
                           ),
-                        ],
-                      ),
-                    );
-                  },
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                
+                const SizedBox(height: 24),
+                
+                // Wellness Plan Section
+                const Text(
+                  "Your Wellness Plan",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                const SizedBox(height: 8),
+                
+                // Wellness plan cards
+                ..._wellnessPlan.map((item) => Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1D30),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: item.color.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: item.color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          item.icon,
+                          color: item.color,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: TextStyle(
+                                color: item.color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item.description,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+                
+                const SizedBox(height: 30),
               ],
             ),
           ),
@@ -515,7 +700,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
             child: Opacity(
               opacity: 0.1,
               child: Image.asset(
-                'assest/background.jpg', 
+                'assets/background.jpg', // Replace with your image path
                 fit: BoxFit.cover,
               ),
             ),
