@@ -429,7 +429,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
             child: Opacity(
               opacity: 0.1,
               child: Image.asset(
-                'assest/background.jpg',
+                'assets/background.jpg', // Replace with your image path
                 fit: BoxFit.cover,
               ),
             ),
@@ -667,6 +667,31 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                   ),
                 )).toList(),
                 
+                const SizedBox(height: 24),
+                
+                // Close button (replacing disclaimer)
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 69, 68, 68),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.close),
+                    label: const Text(
+                      "Close",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                
                 const SizedBox(height: 30),
               ],
             ),
@@ -700,7 +725,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
             child: Opacity(
               opacity: 0.1,
               child: Image.asset(
-                'assets/background.jpg', // Replace with your image path
+                'assest/background.jpg', 
                 fit: BoxFit.cover,
               ),
             ),
