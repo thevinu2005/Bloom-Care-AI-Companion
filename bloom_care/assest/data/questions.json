@@ -1,137 +1,457 @@
 [
-    {
-      "id": "q1",
-      "text": "How would you rate your overall mood today?",
-      "type": "scale",
-      "emoji": "😊",
-      "category": "mood",
-      "correctAnswer": 4
-    },
-    {
-      "id": "q2",
-      "text": "Have you been feeling stressed or overwhelmed?",
-      "type": "yesNo",
-      "emoji": "😓",
-      "category": "stress",
-      "correctAnswer": 0
-    },
-    {
-      "id": "q3",
-      "text": "How well did you sleep last night?",
-      "type": "scale",
-      "emoji": "😴",
-      "category": "sleep",
-      "correctAnswer": 3
-    },
-    {
-      "id": "q4",
-      "text": "Which of these emotions is most positive?",
-      "type": "multipleChoice",
-      "options": ["Happiness", "Anxiety", "Sadness", "Contentment", "Frustration"],
-      "emoji": "🤔",
-      "category": "emotions",
-      "correctAnswer": 0
-    },
-    {
-      "id": "q5",
-      "text": "What is the recommended amount of sleep for adults?",
-      "type": "multipleChoice",
-      "options": ["4-5 hours", "6-7 hours", "7-9 hours", "10-12 hours"],
-      "emoji": "⚡",
-      "category": "knowledge",
-      "correctAnswer": 2
-    },
-    {
-      "id": "q6",
-      "text": "Regular exercise can help reduce symptoms of depression.",
-      "type": "yesNo",
-      "emoji": "🏃",
-      "category": "knowledge",
-      "correctAnswer": 1
-    },
-    {
-      "id": "q7",
-      "text": "How many minutes of mindfulness meditation is recommended daily?",
-      "type": "multipleChoice",
-      "options": ["5-10 minutes", "10-20 minutes", "30-45 minutes", "At least 60 minutes"],
-      "emoji": "🧠",
-      "category": "knowledge",
-      "correctAnswer": 1
-    },
-    {
-      "id": "q8",
-      "text": "Which of these is NOT a recommended stress management technique?",
-      "type": "multipleChoice",
-      "options": [
-        "Deep breathing",
-        "Progressive muscle relaxation",
-        "Avoiding all social contact",
-        "Physical exercise",
-        "Journaling"
-      ],
-      "emoji": "🧘",
-      "category": "knowledge",
-      "correctAnswer": 2
-    },
-    {
-      "id": "q9",
-      "text": "Drinking alcohol can improve sleep quality.",
-      "type": "yesNo",
-      "emoji": "🤕",
-      "category": "knowledge",
-      "correctAnswer": 0
-    },
-    {
-      "id": "q10",
-      "text": "On a scale of 1-5, how important is social connection for mental health?",
-      "type": "scale",
-      "emoji": "👥",
-      "category": "knowledge",
-      "correctAnswer": 4
-    },
-    {
-      "id": "q11",
-      "text": "How often should you practice self-care activities?",
-      "type": "multipleChoice",
-      "options": ["Daily", "Weekly", "Monthly", "Only when feeling stressed"],
-      "emoji": "🛀",
-      "category": "self-care",
-      "correctAnswer": 0
-    },
-    {
-      "id": "q12",
-      "text": "Which of these is a sign of burnout?",
-      "type": "multipleChoice",
-      "options": ["Occasional tiredness", "Chronic exhaustion", "Normal work stress", "Taking on new projects"],
-      "emoji": "🔥",
-      "category": "burnout",
-      "correctAnswer": 1
-    },
-    {
-      "id": "q13",
-      "text": "Spending time in nature can improve mental wellbeing.",
-      "type": "yesNo",
-      "emoji": "🌳",
-      "category": "wellbeing",
-      "correctAnswer": 1
-    },
-    {
-      "id": "q14",
-      "text": "How would you rate your stress level this week?",
-      "type": "scale",
-      "emoji": "📊",
-      "category": "stress",
-      "correctAnswer": 2
-    },
-    {
-      "id": "q15",
-      "text": "Which activity is most beneficial for reducing anxiety?",
-      "type": "multipleChoice",
-      "options": ["Scrolling social media", "Deep breathing exercises", "Watching the news", "Drinking caffeine"],
-      "emoji": "😰",
-      "category": "anxiety",
-      "correctAnswer": 1
-    }
-  ]
+  {
+    "id": "q1",
+    "text": "How would you rate your overall mood today?",
+    "type": "scale",
+    "emoji": "😊",
+    "category": "mood",
+    "correctAnswer": 4
+  },
+  {
+    "id": "q2",
+    "text": "Which activity is most likely to improve your mood?",
+    "type": "multipleChoice",
+    "options": ["Scrolling social media", "Going for a walk outside", "Watching the news", "Staying in bed"],
+    "emoji": "🌈",
+    "category": "mood",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q3",
+    "text": "Mood fluctuations throughout the day are normal.",
+    "type": "yesNo",
+    "emoji": "🔄",
+    "category": "mood",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q4",
+    "text": "How would you rate your ability to regulate your emotions?",
+    "type": "scale",
+    "emoji": "🎭",
+    "category": "mood",
+    "correctAnswer": 3
+  },
+  {
+    "id": "q5",
+    "text": "Which is NOT a healthy way to improve your mood?",
+    "type": "multipleChoice",
+    "options": ["Exercise", "Meditation", "Using substances to feel better", "Connecting with friends"],
+    "emoji": "⚠️",
+    "category": "mood",
+    "correctAnswer": 2
+  },
+
+
+  {
+    "id": "q6",
+    "text": "Have you been feeling stressed or overwhelmed?",
+    "type": "yesNo",
+    "emoji": "😓",
+    "category": "stress",
+    "correctAnswer": 0
+  },
+  {
+    "id": "q7",
+    "text": "How would you rate your stress level this week?",
+    "type": "scale",
+    "emoji": "📊",
+    "category": "stress",
+    "correctAnswer": 2
+  },
+  {
+    "id": "q8",
+   "text": "Which physical symptom is NOT typically associated with stress?",
+    "type": "multipleChoice",
+    "options": ["Headaches", "Muscle tension", "Improved digestion", "Fatigue"],
+    "emoji": "🩺",
+    "category": "stress",
+    "correctAnswer": 2
+  },
+  {
+    "id": "q9",
+    "text": "Some stress can be beneficial for performance.",
+    "type": "yesNo",
+    "emoji": "📈",
+    "category": "stress",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q10",
+    "text": "Which technique is most effective for immediate stress relief?",
+    "type": "multipleChoice",
+    "options": [
+      "Deep breathing",
+      "Planning your next vacation",
+      "Analyzing the source of stress",
+      "Complaining to a friend"
+    ],
+    "emoji": "🧘‍♀️",
+    "category": "stress",
+    "correctAnswer": 0
+  },
+
   
+  {
+    "id": "q11",
+    "text": "How well did you sleep last night?",
+    "type": "scale",
+    "emoji": "😴",
+    "category": "sleep",
+    "correctAnswer": 3
+  },
+  {
+    "id": "q12",
+    "text": "What is the recommended amount of sleep for adults?",
+    "type": "multipleChoice",
+    "options": ["4-5 hours", "6-7 hours", "7-9 hours", "10-12 hours"],
+    "emoji": "⏰",
+    "category": "sleep",
+    "correctAnswer": 2
+  },
+  {
+    "id": "q13",
+    "text": "Using electronic devices before bed can disrupt sleep quality.",
+    "type": "yesNo",
+    "emoji": "📱",
+    "category": "sleep",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q14",
+    "text": "Which is NOT a good sleep hygiene practice?",
+    "type": "multipleChoice",
+    "options": [
+      "Consistent sleep schedule",
+      "Cool bedroom temperature",
+      "Exercising right before bed",
+      "Limiting caffeine"
+    ],
+    "emoji": "🛌",
+    "category": "sleep",
+    "correctAnswer": 2
+  },
+  {
+    "id": "q15",
+    "text": "Poor sleep can negatively impact mental health.",
+    "type": "yesNo",
+    "emoji": "🧠",
+    "category": "sleep",
+    "correctAnswer": 1
+  },
+
   
+  {
+    "id": "q16",
+    "text": "Which of these emotions is most positive?",
+    "type": "multipleChoice",
+    "options": ["Happiness", "Anxiety", "Sadness", "Contentment", "Frustration"],
+    "emoji": "🤔",
+    "category": "emotions",
+    "correctAnswer": 0
+  },
+  {
+    "id": "q17",
+    "text": "Suppressing emotions is generally healthy.",
+    "type": "yesNo",
+    "emoji": "🙊",
+    "category": "emotions",
+    "correctAnswer": 0
+  },
+  {
+    "id": "q18",
+    "text": "How would you rate your emotional awareness?",
+    "type": "scale",
+    "emoji": "🔍",
+    "category": "emotions",
+    "correctAnswer": 3
+  },
+  {
+    "id": "q19",
+    "text": "Which is NOT an effective way to process difficult emotions?",
+    "type": "multipleChoice",
+    "options": ["Journaling", "Talking to a trusted friend", "Mindfulness", "Avoiding the emotion entirely"],
+    "emoji": "📝",
+    "category": "emotions",
+    "correctAnswer": 3
+  },
+  {
+    "id": "q20",
+    "text": "All emotions, even uncomfortable ones, serve a purpose.",
+    "type": "yesNo",
+    "emoji": "⚖️",
+    "category": "emotions",
+    "correctAnswer": 1
+  },
+
+  
+  {
+    "id": "q21",
+    "text": "Regular exercise can help reduce symptoms of depression.",
+    "type": "yesNo",
+    "emoji": "🏃",
+    "category": "knowledge",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q22",
+    "text": "How many minutes of mindfulness meditation is recommended daily?",
+    "type": "multipleChoice",
+    "options": ["5-10 minutes", "10-20 minutes", "30-45 minutes", "At least 60 minutes"],
+    "emoji": "🧠",
+    "category": "knowledge",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q23",
+    "text": "Which of these is NOT a recommended stress management technique?",
+    "type": "multipleChoice",
+    "options": [
+      "Deep breathing",
+      "Progressive muscle relaxation",
+      "Avoiding all social contact",
+      "Physical exercise",
+      "Journaling"
+    ],
+    "emoji": "🧘",
+    "category": "knowledge",
+    "correctAnswer": 2
+  },
+  {
+    "id": "q24",
+    "text": "Drinking alcohol can improve sleep quality.",
+    "type": "yesNo",
+    "emoji": "🤕",
+    "category": "knowledge",
+    "correctAnswer": 0
+  },
+  {
+    "id": "q25",
+    "text": "On a scale of 1-5, how important is social connection for mental health?",
+    "type": "scale",
+    "emoji": "👥",
+    "category": "knowledge",
+    "correctAnswer": 4
+  },
+
+  
+  {
+    "id": "q26",
+    "text": "How often should you practice self-care activities?",
+    "type": "multipleChoice",
+    "options": ["Daily", "Weekly", "Monthly", "Only when feeling stressed"],
+    "emoji": "🛀",
+    "category": "self-care",
+    "correctAnswer": 0
+  },
+  {
+    "id": "q27",
+    "text": "Self-care is only necessary when you're feeling stressed.",
+    "type": "yesNo",
+    "emoji": "🧖‍♀️",
+    "category": "self-care",
+    "correctAnswer": 0
+  },
+  {
+    "id": "q28",
+    "text": "How would you rate your current self-care routine?",
+    "type": "scale",
+    "emoji": "📆",
+    "category": "self-care",
+    "correctAnswer": 3
+  },
+  {
+    "id": "q29",
+    "text": "Which is NOT typically considered a form of self-care?",
+    "type": "multipleChoice",
+    "options": ["Setting boundaries", "Saying yes to everything", "Taking breaks", "Engaging in hobbies"],
+    "emoji": "🚫",
+    "category": "self-care",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q30",
+    "text": "Self-care practices should be personalized to individual needs.",
+    "type": "yesNo",
+    "emoji": "👤",
+    "category": "self-care",
+    "correctAnswer": 1
+  },
+
+  
+  {
+    "id": "q31",
+    "text": "Which of these is a sign of burnout?",
+    "type": "multipleChoice",
+    "options": ["Occasional tiredness", "Chronic exhaustion", "Normal work stress", "Taking on new projects"],
+    "emoji": "🔥",
+    "category": "burnout",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q32",
+    "text": "Burnout only affects people in high-pressure jobs.",
+    "type": "yesNo",
+    "emoji": "💼",
+    "category": "burnout",
+    "correctAnswer": 0
+  },
+  {
+    "id": "q33",
+    "text": "How would you rate your current risk of burnout?",
+    "type": "scale",
+    "emoji": "📉",
+    "category": "burnout",
+    "correctAnswer": 2
+  },
+  {
+    "id": "q34",
+    "text": "Which is NOT a dimension of burnout?",
+    "type": "multipleChoice",
+    "options": ["Emotional exhaustion", "Cynicism", "Reduced professional efficacy", "Increased creativity"],
+    "emoji": "📊",
+    "category": "burnout",
+    "correctAnswer": 3
+  },
+  {
+    "id": "q35",
+    "text": "Taking regular breaks can help prevent burnout.",
+    "type": "yesNo",
+    "emoji": "⏸️",
+    "category": "burnout",
+    "correctAnswer": 1
+  },
+
+  
+  {
+    "id": "q36",
+    "text": "Spending time in nature can improve mental wellbeing.",
+    "type": "yesNo",
+    "emoji": "🌳",
+    "category": "wellbeing",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q37",
+    "text": "How would you rate your overall sense of wellbeing?",
+    "type": "scale",
+    "emoji": "🌟",
+    "category": "wellbeing",
+    "correctAnswer": 3
+  },
+  {
+    "id": "q38",
+    "text": "Which factor is LEAST important for overall wellbeing?",
+    "type": "multipleChoice",
+    "options": ["Physical health", "Social connections", "Having the latest technology", "Purpose and meaning"],
+    "emoji": "🔍",
+    "category": "wellbeing",
+    "correctAnswer": 2
+  },
+  {
+    "id": "q39",
+    "text": "Wellbeing is solely determined by external circumstances.",
+    "type": "yesNo",
+    "emoji": "🌍",
+    "category": "wellbeing",
+    "correctAnswer": 0
+  },
+  {
+    "id": "q40",
+    "text": "Which practice is most associated with improved wellbeing?",
+    "type": "multipleChoice",
+    "options": ["Gratitude", "Comparison to others", "Multitasking", "Working longer hours"],
+    "emoji": "🙏",
+    "category": "wellbeing",
+    "correctAnswer": 0
+  },
+
+  
+  {
+    "id": "q41",
+    "text": "Which activity is most beneficial for reducing anxiety?",
+    "type": "multipleChoice",
+    "options": ["Scrolling social media", "Deep breathing exercises", "Watching the news", "Drinking caffeine"],
+    "emoji": "😰",
+    "category": "anxiety",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q42",
+    "text": "How would you rate your current anxiety level?",
+    "type": "scale",
+    "emoji": "📈",
+    "category": "anxiety",
+    "correctAnswer": 2
+  },
+  {
+    "id": "q43",
+    "text": "Anxiety is always harmful and should be eliminated completely.",
+    "type": "yesNo",
+    "emoji": "⚠️",
+    "category": "anxiety",
+    "correctAnswer": 0
+  },
+  {
+    "id": "q44",
+    "text": "Which is NOT a common physical symptom of anxiety?",
+    "type": "multipleChoice",
+    "options": ["Racing heart", "Muscle tension", "Decreased blood pressure", "Shortness of breath"],
+    "emoji": "🫀",
+    "category": "anxiety",
+    "correctAnswer": 2
+  },
+  {
+    "id": "q45",
+    "text": "Avoiding anxiety-provoking situations is the best long-term strategy.",
+    "type": "yesNo",
+    "emoji": "🏃‍♂️",
+    "category": "anxiety",
+    "correctAnswer": 0
+  },
+
+
+  {
+    "id": "q46",
+    "text": "Diet can significantly impact mental health.",
+    "type": "yesNo",
+    "emoji": "🍎",
+    "category": "nutrition",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q47",
+    "text": "How would you rate the quality of your diet?",
+    "type": "scale",
+    "emoji": "🥗",
+    "category": "nutrition",
+    "correctAnswer": 3
+  },
+  {
+    "id": "q48",
+    "text": "Which nutrient is most associated with improved mood?",
+    "type": "multipleChoice",
+    "options": ["Refined sugar", "Omega-3 fatty acids", "Artificial sweeteners", "Saturated fat"],
+    "emoji": "🧠",
+    "category": "nutrition",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q49",
+    "text": "Dehydration can negatively affect mood and cognitive function.",
+    "type": "yesNo",
+    "emoji": "💧",
+    "category": "nutrition",
+    "correctAnswer": 1
+  },
+  {
+    "id": "q50",
+    "text": "Which eating pattern is LEAST beneficial for mental health?",
+    "type": "multipleChoice",
+    "options": ["Regular balanced meals", "Mediterranean diet", "Skipping meals frequently", "Including fermented foods"],
+    "emoji": "⏰",
+    "category": "nutrition",
+    "correctAnswer": 2
+  }
+]
+
