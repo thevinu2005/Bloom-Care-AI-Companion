@@ -5,7 +5,6 @@ import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:bloom_care/screens/caregiver/caregiver_dashboard.dart';
-import 'package:bloom_care/screens/notification/notification_detail.dart';
 
 class CaregiverHomePage extends StatefulWidget {
   const CaregiverHomePage({super.key});
@@ -28,6 +27,7 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
   // Stream subscriptions for real-time updates
   final List<StreamSubscription> _subscriptions = [];
   final Map<String, StreamSubscription> _moodSubscriptions = {};
+  final Map<String, StreamSubscription> _emergencySubscriptions = {};
 
   @override
   void initState() {
@@ -44,6 +44,11 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
     
     // Cancel all mood subscriptions
     _moodSubscriptions.forEach((_, subscription) {
+      subscription.cancel();
+    });
+    
+    // Cancel all emergency subscriptions
+    _emergencySubscriptions.forEach((_, subscription) {
       subscription.cancel();
     });
     
@@ -109,6 +114,15 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
                   _moodSubscriptions.remove(id);
                 });
             
+            // Cancel existing emergency subscriptions for elders that might have been removed
+            _emergencySubscriptions.keys
+                .where((id) => !currentElderIds.contains(id))
+                .toList()
+                .forEach((id) {
+                  _emergencySubscriptions[id]?.cancel();
+                  _emergencySubscriptions.remove(id);
+                });
+            
             for (var elderDoc in snapshot.docs) {
               final elderData = elderDoc.data();
               final dateOfBirth = elderData['dateOfBirth'] as String?;
@@ -155,6 +169,9 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
               
               // Set up real-time listener for mood updates for this elder
               _setupMoodListener(elderDoc.id);
+              
+              // Set up real-time listener for emergency status updates
+              _setupEmergencyListener(elderDoc.id);
             }
 
             setState(() {
@@ -235,6 +252,40 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
     _moodSubscriptions[elderId] = subscription;
   }
 
+  // Add a new method to listen for emergency status changes
+  void _setupEmergencyListener(String elderId) {
+    // Cancel existing subscription if it exists
+    _emergencySubscriptions[elderId]?.cancel();
+    
+    // Create new subscription for this elder's document to monitor emergency status
+    final emergencyStream = _firestore
+        .collection('users')
+        .doc(elderId)
+        .snapshots();
+        
+    final subscription = emergencyStream.listen((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data();
+        if (data != null) {
+          final bool isEmergency = data['emergency'] ?? false;
+          print('Emergency status changed for elder $elderId: $isEmergency');
+          
+          setState(() {
+            // Find and update the elder's emergency status in the list
+            for (int i = 0; i < _assignedElders.length; i++) {
+              if (_assignedElders[i]['id'] == elderId) {
+                _assignedElders[i]['emergency'] = isEmergency;
+                break;
+              }
+            }
+          });
+        }
+      }
+    });
+    
+    _emergencySubscriptions[elderId] = subscription;
+  }
+
   String _getInitials(String name) {
     if (name.isEmpty) return '';
     
@@ -251,13 +302,79 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
     }
   }
 
+  // Method to reset emergency status when clicking on an elder's profile
+  Future<void> _resetEmergencyStatus(String elderId) async {
+    try {
+      print('Resetting emergency status for elder: $elderId');
+      await _firestore.collection('users').doc(elderId).update({
+        'emergency': false,
+      });
+      
+      // Show a confirmation message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Emergency status cleared'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error resetting emergency status: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error clearing emergency status: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _viewElderDetails(Map<String, dynamic> elder) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ElderDetailsPage(elder: elder),
-      ),
-    );
+    // Check if this elder is in emergency mode
+    final bool isEmergency = elder['emergency'] == true;
+    
+    // If in emergency mode, reset it first
+    if (isEmergency) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Emergency Alert'),
+            content: Text('${elder['name']} is in emergency mode. Do you want to clear the emergency status?'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                  _resetEmergencyStatus(elder['id']); // Reset emergency status
+                  
+                  // Then navigate to elder details
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ElderDetailsPage(elder: elder),
+                    ),
+                  );
+                },
+                child: const Text('Yes'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      // If not in emergency mode, just navigate to elder details
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ElderDetailsPage(elder: elder),
+        ),
+      );
+    }
   }
 
   @override
@@ -594,8 +711,11 @@ class ElderProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Check if emergency is true
+    // Check if emergency is true - ensure it's a boolean
     final bool isEmergency = elder['emergency'] == true;
+    
+    // Debug print to verify the emergency status
+    print('Building elder card for ${elder['name']}, Emergency status: $isEmergency');
     
     // Get the mood emoji based on the mood
     String moodEmoji = _getMoodEmoji(elder['mood']);

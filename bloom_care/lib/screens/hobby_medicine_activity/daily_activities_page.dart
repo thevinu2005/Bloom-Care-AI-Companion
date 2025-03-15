@@ -1,10 +1,9 @@
-import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
 import 'package:flutter/material.dart';
 import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:bloom_care/services/notification_service.dart';
+import 'dart:async';
 
 class DailyActivitiesPage extends StatefulWidget {
   const DailyActivitiesPage({super.key});
@@ -25,13 +24,24 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final NotificationService _notificationService = NotificationService();
+  
+  // Stream subscriptions for real-time updates
+  List<StreamSubscription> _subscriptions = [];
 
   @override
   void initState() {
     super.initState();
     // Load data when the page is initialized
     _loadData();
+  }
+  
+  @override
+  void dispose() {
+    // Cancel all stream subscriptions
+    for (var subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    super.dispose();
   }
 
   // Load data from Firestore
@@ -51,12 +61,17 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
       hobbyTimes.clear();
       appointments.clear();
 
-      // Load meal plans
+      // Debug print to track loading process
+      print('Loading daily activities for user: ${user.uid}');
+
+      // 1. Load meal plans from elder's collection
       final mealPlansSnapshot = await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('meal_plans')
           .get();
+
+      print('Found ${mealPlansSnapshot.docs.length} meal plans in elder\'s collection');
 
       for (var doc in mealPlansSnapshot.docs) {
         final data = doc.data();
@@ -67,6 +82,64 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
           isCompleted: data['isCompleted'] ?? false,
           id: doc.id, // Store document ID for updates
         ));
+      }
+
+      // 2. Check if there are caregiver-added meals
+      // First get the elder's document to check if they have a caregiver
+      final elderDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (elderDoc.exists) {
+        final elderData = elderDoc.data() as Map<String, dynamic>;
+        final caregiverId = elderData['assignedCaregiver'] as String?;
+        
+        if (caregiverId != null && caregiverId.isNotEmpty) {
+          print('Elder has assigned caregiver: $caregiverId, checking for caregiver-added meals');
+          
+          // Check caregiver-added meals collection
+          final caregiverMealsSnapshot = await _firestore
+              .collection('users')
+              .doc(caregiverId)
+              .collection('elder_meals')
+              .where('elderId', isEqualTo: user.uid)
+              .get();
+              
+          print('Found ${caregiverMealsSnapshot.docs.length} caregiver-added meals');
+          
+          for (var doc in caregiverMealsSnapshot.docs) {
+            final data = doc.data();
+            mealPlans.add(MealPlan(
+              time: data['time'] ?? '',
+              mealType: data['mealType'] ?? '',
+              description: data['description'] ?? '',
+              isCompleted: data['isCompleted'] ?? false,
+              id: doc.id, // Store document ID for updates
+              addedByCaregiver: true, // Flag to indicate this was added by caregiver
+              caregiverId: caregiverId, // Store caregiver ID for updates
+            ));
+          }
+          
+          // Also check the standard meal_plans collection in caregiver's documents
+          final standardCaregiverMealsSnapshot = await _firestore
+              .collection('users')
+              .doc(caregiverId)
+              .collection('meal_plans')
+              .where('elderId', isEqualTo: user.uid)
+              .get();
+              
+          print('Found ${standardCaregiverMealsSnapshot.docs.length} meals in caregiver\'s meal_plans collection');
+          
+          for (var doc in standardCaregiverMealsSnapshot.docs) {
+            final data = doc.data();
+            mealPlans.add(MealPlan(
+              time: data['time'] ?? '',
+              mealType: data['mealType'] ?? '',
+              description: data['description'] ?? '',
+              isCompleted: data['isCompleted'] ?? false,
+              id: doc.id, // Store document ID for updates
+              addedByCaregiver: true, // Flag to indicate this was added by caregiver
+              caregiverId: caregiverId, // Store caregiver ID for updates
+            ));
+          }
+        }
       }
 
       // Load hobby times
@@ -105,6 +178,9 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
           id: doc.id, // Store document ID for updates
         ));
       }
+      
+      // Set up real-time listeners for updates
+      _setupRealTimeListeners(user.uid);
 
       // If no data was loaded, add sample data (optional)
       if (mealPlans.isEmpty) {
@@ -170,6 +246,127 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
       );
     }
   }
+  
+  void _setupRealTimeListeners(String userId) {
+    // Cancel any existing subscriptions
+    for (var subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    
+    // 1. Listen for changes in elder's meal plans
+    final mealPlansStream = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('meal_plans')
+        .snapshots();
+        
+    final mealSubscription = mealPlansStream.listen((snapshot) {
+      print('Meal plans update detected: ${snapshot.docs.length} documents');
+      _handleMealPlansUpdate(snapshot, false, null);
+    });
+    
+    _subscriptions.add(mealSubscription);
+    
+    // 2. Check if elder has a caregiver and listen to their additions too
+    _firestore.collection('users').doc(userId).get().then((elderDoc) {
+      if (elderDoc.exists) {
+        final elderData = elderDoc.data() as Map<String, dynamic>;
+        final caregiverId = elderData['assignedCaregiver'] as String?;
+        
+        if (caregiverId != null && caregiverId.isNotEmpty) {
+          print('Setting up listener for caregiver-added meals from: $caregiverId');
+          
+          // Listen to caregiver's elder_meals collection
+          final caregiverMealsStream = _firestore
+              .collection('users')
+              .doc(caregiverId)
+              .collection('elder_meals')
+              .where('elderId', isEqualTo: userId)
+              .snapshots();
+              
+          final caregiverMealSubscription = caregiverMealsStream.listen((snapshot) {
+            print('Caregiver meal update detected: ${snapshot.docs.length} documents');
+            _handleMealPlansUpdate(snapshot, true, caregiverId);
+          });
+          
+          _subscriptions.add(caregiverMealSubscription);
+          
+          // Also listen to standard meal_plans collection
+          final standardMealsStream = _firestore
+              .collection('users')
+              .doc(caregiverId)
+              .collection('meal_plans')
+              .where('elderId', isEqualTo: userId)
+              .snapshots();
+              
+          final standardMealSubscription = standardMealsStream.listen((snapshot) {
+            print('Standard caregiver meal update detected: ${snapshot.docs.length} documents');
+            _handleMealPlansUpdate(snapshot, true, caregiverId);
+          });
+          
+          _subscriptions.add(standardMealSubscription);
+        }
+      }
+    });
+  }
+
+  void _handleMealPlansUpdate(QuerySnapshot snapshot, bool isFromCaregiver, String? caregiverId) {
+    // Process updates, additions, and removals
+    for (var change in snapshot.docChanges) {
+      final data = change.doc.data() as Map<String, dynamic>;
+      
+      switch (change.type) {
+        case DocumentChangeType.added:
+          // Check if this meal plan already exists in our list
+          final existingIndex = mealPlans.indexWhere((meal) => meal.id == change.doc.id);
+          
+          if (existingIndex == -1) {
+            // This is a new meal plan
+            setState(() {
+              mealPlans.add(MealPlan(
+                time: data['time'] ?? '',
+                mealType: data['mealType'] ?? '',
+                description: data['description'] ?? '',
+                isCompleted: data['isCompleted'] ?? false,
+                id: change.doc.id,
+                addedByCaregiver: isFromCaregiver,
+                caregiverId: caregiverId,
+              ));
+            });
+            print('Added new meal plan: ${data['mealType']} at ${data['time']}');
+          }
+          break;
+          
+        case DocumentChangeType.modified:
+          // Update existing meal plan
+          final existingIndex = mealPlans.indexWhere((meal) => meal.id == change.doc.id);
+          
+          if (existingIndex != -1) {
+            setState(() {
+              mealPlans[existingIndex].time = data['time'] ?? mealPlans[existingIndex].time;
+              mealPlans[existingIndex].mealType = data['mealType'] ?? mealPlans[existingIndex].mealType;
+              mealPlans[existingIndex].description = data['description'] ?? mealPlans[existingIndex].description;
+              mealPlans[existingIndex].isCompleted = data['isCompleted'] ?? mealPlans[existingIndex].isCompleted;
+            });
+            print('Updated meal plan: ${data['mealType']} at ${data['time']}');
+          }
+          break;
+          
+        case DocumentChangeType.removed:
+          // Remove meal plan
+          final existingIndex = mealPlans.indexWhere((meal) => meal.id == change.doc.id);
+          
+          if (existingIndex != -1) {
+            setState(() {
+              mealPlans.removeAt(existingIndex);
+            });
+            print('Removed meal plan with ID: ${change.doc.id}');
+          }
+          break;
+      }
+    }
+  }
 
   // Save a single meal plan to Firestore
   Future<void> _saveMealPlan(MealPlan meal) async {
@@ -179,36 +376,81 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
         throw Exception('User not logged in');
       }
 
-      // If the meal has an ID, update it, otherwise add a new one
-      if (meal.id != null) {
-        await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('meal_plans')
-            .doc(meal.id)
-            .update({
-          'time': meal.time,
-          'mealType': meal.mealType,
-          'description': meal.description,
-          'isCompleted': meal.isCompleted,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      } else {
-        // Add new meal and update the ID
-        final docRef = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('meal_plans')
-            .add({
-          'time': meal.time,
-          'mealType': meal.mealType,
-          'description': meal.description,
-          'isCompleted': meal.isCompleted,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+      // Determine which collection to update based on who added the meal
+      if (meal.addedByCaregiver && meal.caregiverId != null) {
+        print('Updating caregiver-added meal in caregiver\'s collection');
         
-        // Update the meal with the new ID
-        meal.id = docRef.id;
+        // If the meal has an ID, update it in the caregiver's collection
+        if (meal.id != null) {
+          // Try to update in elder_meals collection first
+          try {
+            await _firestore
+                .collection('users')
+                .doc(meal.caregiverId)
+                .collection('elder_meals')
+                .doc(meal.id)
+                .update({
+              'time': meal.time,
+              'mealType': meal.mealType,
+              'description': meal.description,
+              'isCompleted': meal.isCompleted,
+              'updatedAt': FieldValue.serverTimestamp(),
+              'elderId': user.uid, // Ensure elderId is set
+            });
+            print('Updated meal in elder_meals collection');
+          } catch (e) {
+            print('Error updating in elder_meals, trying meal_plans: $e');
+            // If that fails, try the standard meal_plans collection
+            await _firestore
+                .collection('users')
+                .doc(meal.caregiverId)
+                .collection('meal_plans')
+                .doc(meal.id)
+                .update({
+              'time': meal.time,
+              'mealType': meal.mealType,
+              'description': meal.description,
+              'isCompleted': meal.isCompleted,
+              'updatedAt': FieldValue.serverTimestamp(),
+              'elderId': user.uid, // Ensure elderId is set
+            });
+            print('Updated meal in meal_plans collection');
+          }
+        }
+      } else {
+        print('Updating elder-added meal in elder\'s collection');
+        
+        // If the meal has an ID, update it, otherwise add a new one
+        if (meal.id != null) {
+          await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('meal_plans')
+              .doc(meal.id)
+              .update({
+            'time': meal.time,
+            'mealType': meal.mealType,
+            'description': meal.description,
+            'isCompleted': meal.isCompleted,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          // Add new meal and update the ID
+          final docRef = await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('meal_plans')
+              .add({
+            'time': meal.time,
+            'mealType': meal.mealType,
+            'description': meal.description,
+            'isCompleted': meal.isCompleted,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+          
+          // Update the meal with the new ID
+          meal.id = docRef.id;
+        }
       }
     } catch (e) {
       print('Error saving meal plan: $e');
@@ -316,8 +558,33 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
         throw Exception('User not logged in');
       }
 
-      // Only delete from Firestore if it has an ID
-      if (meal.id != null) {
+      // Determine which collection to delete from based on who added the meal
+      if (meal.addedByCaregiver && meal.caregiverId != null && meal.id != null) {
+        print('Deleting caregiver-added meal from caregiver\'s collection');
+        
+        // Try to delete from elder_meals collection first
+        try {
+          await _firestore
+              .collection('users')
+              .doc(meal.caregiverId)
+              .collection('elder_meals')
+              .doc(meal.id)
+              .delete();
+          print('Deleted meal from elder_meals collection');
+        } catch (e) {
+          print('Error deleting from elder_meals, trying meal_plans: $e');
+          // If that fails, try the standard meal_plans collection
+          await _firestore
+              .collection('users')
+              .doc(meal.caregiverId)
+              .collection('meal_plans')
+              .doc(meal.id)
+              .delete();
+          print('Deleted meal from meal_plans collection');
+        }
+      } else if (meal.id != null) {
+        // Delete from elder's collection
+        print('Deleting elder-added meal from elder\'s collection');
         await _firestore
             .collection('users')
             .doc(user.uid)
@@ -493,9 +760,64 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
     }
   }
 
-  // Updated method to notify the caregiver about elder activities using NotificationService
+  // Updated method to notify the caregiver about elder activities
   Future<void> _notifyCaregiverAboutActivity(String type, String title, String message) async {
     try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        return;
+      }
+
+      // Get the user's profile to check for assigned caregiver
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) {
+        return;
+      }
+
+      final userData = userDoc.data()!;
+      final String? caregiverId = userData['assignedCaregiver'] as String?;
+      
+      // If no caregiver is assigned, exit
+      if (caregiverId == null || caregiverId.isEmpty) {
+        print('No caregiver assigned, skipping notification');
+        return;
+      }
+
+      // Get elder's name and profile image
+      final elderName = userData['name'] ?? 'Your elder';
+      final elderProfileImage = userData['profileImage'] ?? 'assets/default_avatar.png';
+      
+      // Format current time
+      final now = DateTime.now();
+      final formattedTime = DateFormat('h:mm a').format(now);
+      
+      // Determine icon and colors based on activity type
+      Color notificationColor;
+      Color textColor;
+      String iconString;
+      
+      switch(type) {
+        case 'hobby':
+          notificationColor = const Color(0xFFFFF3CD);
+          textColor = const Color(0xFF856404);
+          iconString = 'sports_esports';
+          break;
+        case 'meal':
+          notificationColor = const Color(0xFFD4EDDA);
+          textColor = const Color(0xFF155724);
+          iconString = 'restaurant';
+          break;
+        case 'appointment':
+          notificationColor = const Color(0xFFE2D9F3);
+          textColor = const Color(0xFF6A359C);
+          iconString = 'event';
+          break;
+        default:
+          notificationColor = const Color(0xFFD1ECF1);
+          textColor = const Color(0xFF0C5460);
+          iconString = 'event_note';
+      }
+      
       // Extract activity details from the message
       String activityName = '';
       String activityDetails = '';
@@ -530,13 +852,34 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
         }
       }
       
-      // Use the notification service to send the notification to caregiver
-      await _notificationService.notifyCaregiverAboutElderActivity(
-        activityType: type,
-        activityName: activityName,
-        activityDetails: activityDetails,
-      );
+      // Create notification data
+      final notificationData = {
+        'type': type,
+        'title': 'Elder Activity Update',
+        'message': '$elderName has added a new $type: $activityName $activityDetails',
+        'elderId': user.uid,
+        'elderName': elderName,
+        'elderImage': elderProfileImage,
+        'activityName': activityName,
+        'activityType': type,
+        'activityDetails': activityDetails,
+        'timestamp': FieldValue.serverTimestamp(),
+        'formattedTime': formattedTime,
+        'isRead': false,
+        'color': notificationColor.value,
+        'textColor': textColor.value,
+        'icon': iconString,
+        'iconColor': Colors.blue.value,
+      };
       
+      // Send notification to caregiver
+      await _firestore
+          .collection('users')
+          .doc(caregiverId)
+          .collection('notifications')
+          .add(notificationData);
+      
+      print('Activity notification sent to caregiver: $caregiverId');
     } catch (e) {
       print('Error sending notification to caregiver: $e');
     }
@@ -574,7 +917,7 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
       body: _isLoading 
           ? const Center(child: CircularProgressIndicator())
           : _buildDailyActivitiesContent(),
-      bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: -1), // Added BottomNav with currentIndex 0
+      bottomNavigationBar: const BottomNav(currentIndex: -1), // Added BottomNav with currentIndex 0
     );
   }
 
@@ -1221,12 +1564,34 @@ class _DailyActivitiesPageState extends State<DailyActivitiesPage> {
               color: Color(0xFF8FA2E6),
             ),
           ),
-          title: Text(
-            meal.mealType,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5D77D6),
-            ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  meal.mealType,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5D77D6),
+                  ),
+                ),
+              ),
+              if (meal.addedByCaregiver == true)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2D9F3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'Added by caregiver',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF6A359C),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+            ],
           ),
           subtitle: Text(
             '${meal.time} - ${meal.description}',
@@ -1823,6 +2188,8 @@ class MealPlan {
   String description;
   bool isCompleted;
   String? id; // Document ID for Firestore
+  bool addedByCaregiver; // Flag to indicate if added by caregiver
+  String? caregiverId; // ID of caregiver who added this meal
 
   MealPlan({
     required this.time,
@@ -1830,6 +2197,8 @@ class MealPlan {
     required this.description,
     required this.isCompleted,
     this.id,
+    this.addedByCaregiver = false,
+    this.caregiverId,
   });
 }
 
@@ -1868,3 +2237,4 @@ class Appointment {
     this.id,
   });
 }
+

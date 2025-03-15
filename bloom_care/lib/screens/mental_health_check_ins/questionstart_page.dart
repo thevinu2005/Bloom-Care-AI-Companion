@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
-import 'full_question_page.dart'; // Updated import
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'full_question_page.dart';
 
 class QuizWelcomeScreen extends StatefulWidget {
-  final bool? justCompleted; // Make justCompleted optional with ?
+  final bool? justCompleted;
+  final String? score;
+  final int? totalQuestions;
   
   const QuizWelcomeScreen({
     Key? key, 
     this.justCompleted,
+    this.score,
+    this.totalQuestions,
   }) : super(key: key);
 
   @override
@@ -18,15 +24,43 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
   bool _isCompleted = false;
   DateTime? _nextRefreshDate;
   bool _isLoading = true;
+  Map<String, dynamic>? _elderData;
+  String? _caregiverId;
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     _loadCompletionStatus();
     
     // If we just completed the quiz, mark it as completed
     if (widget.justCompleted == true) {
       _markAsCompleted();
+    }
+  }
+
+  // Load the user data from Firestore
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('User not logged in');
+        return;
+      }
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (userDoc.exists) {
+        setState(() {
+          _elderData = userDoc.data();
+          _caregiverId = _elderData?['assignedCaregiver'];
+        });
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
     }
   }
 
@@ -91,25 +125,73 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
         _isCompleted = true;
         _nextRefreshDate = nextRefresh;
       });
+
+      // If we have a score from the completed quiz, save it to Firestore
+      if (widget.score != null && widget.totalQuestions != null) {
+        await _saveCheckInResults(widget.score!, widget.totalQuestions!);
+      }
     } catch (e) {
       print('Error marking as completed: $e');
     }
   }
 
-  // Reset the completion status to allow re-taking the quiz
-  Future<void> _resetCompletionStatus() async {
+  // Save check-in results to Firestore and notify caregiver
+  Future<void> _saveCheckInResults(String score, int totalQuestions) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final elderName = _elderData?['name'] ?? 'Elder';
       
-      // Remove the completion timestamp
-      await prefs.remove('last_completion_timestamp');
-      
-      setState(() {
-        _isCompleted = false;
-        _nextRefreshDate = null;
+      // Save results to Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('checkIns')
+          .add({
+        'score': score,
+        'totalQuestions': totalQuestions,
+        'timestamp': FieldValue.serverTimestamp(),
+        'percentage': (int.parse(score) / totalQuestions * 100).toStringAsFixed(0),
       });
+
+      // If there's an assigned caregiver, notify them about the results
+      if (_caregiverId != null && _caregiverId!.isNotEmpty) {
+        // Get the caregiver's document to check if they exist
+        final caregiverDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_caregiverId)
+            .get();
+
+        if (caregiverDoc.exists) {
+          // Create a notification for the caregiver
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(_caregiverId)
+              .collection('notifications')
+              .add({
+            'type': 'mental_health',
+            'elderName': elderName,
+            'elderId': user.uid,
+            'activityType': 'mental_health',
+            'title': 'Mental Health Check-in',
+            'message': '$elderName completed their weekly mental health check-in with a score of $score/$totalQuestions',
+            'color': const Color(0xFFE2D9F3).value,
+            'textColor': const Color(0xFF6A359C).value,
+            'icon': 'psychology',
+            'iconColor': const Color(0xFF6B84DC).value,
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+            'priority': 'high',
+            'score': score,
+            'totalQuestions': totalQuestions,
+          });
+          
+          print('Caregiver notification sent about mental health check-in');
+        }
+      }
     } catch (e) {
-      print('Error resetting completion status: $e');
+      print('Error saving check-in results: $e');
     }
   }
 
@@ -138,21 +220,45 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
       body: _isLoading 
           ? const Center(child: CircularProgressIndicator(color: Colors.white))
           : SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 90),
+        child: Column(
+          children: [
+            // Back button row
+            Padding(
+              padding: const EdgeInsets.only(top: 16.0, left: 8.0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/');
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+              const SizedBox(height: 30),
+              
+              // Elder profile card
+              if (_elderData != null)
+                _buildElderProfileCard(),
+                
+              const SizedBox(height: 20),
+              
               // Quiz title with trophy
               const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'check-ins',
+                    'Mental Health Check-ins',
                     style: TextStyle(
-                      fontSize: 42,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
                       color: Colors.white,
@@ -160,7 +266,7 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
               // Main image with confetti decoration
               Stack(
                 alignment: Alignment.center,
@@ -183,7 +289,7 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
                   ),
                   // Main image
                   Container(
-                    height: 250,
+                    height: 200,
                     decoration: BoxDecoration(
                       color: const Color.fromARGB(0, 238, 238, 238),
                       borderRadius: BorderRadius.circular(16),
@@ -196,7 +302,7 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
                         errorBuilder: (context, error, stackTrace) {
                           // Fallback if image is not found
                           return Container(
-                            height: 250,
+                            height: 200,
                             width: double.infinity,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
@@ -216,7 +322,7 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
               // Main heading
               const Text(
                 'Track Your Mental Wellbeing',
@@ -302,7 +408,13 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
                         ? null // Disable the button if completed
                         : () {
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const QuestionnaireScreen()),
+                              MaterialPageRoute(
+                                builder: (context) => QuestionnaireScreen(
+                                  elderId: FirebaseAuth.instance.currentUser?.uid,
+                                  elderName: _elderData?['name'],
+                                  caregiverId: _caregiverId,
+                                ),
+                              ),
                             );
                           },
                     style: ElevatedButton.styleFrom(
@@ -318,69 +430,128 @@ class _QuizWelcomeScreenState extends State<QuizWelcomeScreen> {
                     child: Text(
                       _isCompleted 
                           ? 'Check-in closed until next week'
-                          : 'let begin weekly check-in',
+                          : 'Begin Weekly Check-in',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  
-                  // Re-take option if completed
-                  if (_isCompleted)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12.0), // Reduced padding
-                      child: TextButton.icon(
-                        onPressed: () {
-                          // Show confirmation dialog
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text("Re-take Check-in?"),
-                              content: const Text(
-                                "Your previous check-in will be reset. This is typically recommended only once per week. Are you sure you want to continue?",
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text("Cancel"),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    _resetCompletionStatus();
-                                  },
-                                  child: const Text("Yes, Re-take"),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.refresh, color: Colors.white),
-                        label: const Text(
-                          "Re-take Check-in",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        style: TextButton.styleFrom(
-                          backgroundColor: Colors.red.shade800,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Reduced padding
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                      ),
-                    ),
                 ],
               ),
               const SizedBox(height: 20), // Reduced bottom padding
-            ],
-          ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-     )
+    );
+  }
+
+  // Build elder profile card
+  Widget _buildElderProfileCard() {
+    final elderName = _elderData?['name'] ?? 'Elder';
+    final elderEmail = _elderData?['email'] ?? 'No email';
+    final elderAge = _elderData?['age'] ?? 'N/A';
+    final profileImage = _elderData?['profileImage'];
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          // Profile image
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              image: profileImage != null && profileImage.isNotEmpty
+                  ? DecorationImage(
+                      image: NetworkImage(profileImage),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: profileImage == null || profileImage.isEmpty
+                ? const Icon(Icons.person, size: 40, color: Colors.white)
+                : null,
+          ),
+          const SizedBox(width: 16),
+          // Elder details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  elderName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  elderEmail,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Age: $elderAge",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Caregiver status
+          Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _caregiverId != null && _caregiverId!.isNotEmpty
+                      ? Colors.green.withOpacity(0.3)
+                      : Colors.red.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _caregiverId != null && _caregiverId!.isNotEmpty
+                        ? Colors.green.withOpacity(0.7)
+                        : Colors.red.withOpacity(0.7),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  _caregiverId != null && _caregiverId!.isNotEmpty
+                      ? "Caregiver"
+                      : "No Caregiver",
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

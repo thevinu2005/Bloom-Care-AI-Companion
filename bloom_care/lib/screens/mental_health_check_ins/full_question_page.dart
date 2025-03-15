@@ -7,7 +7,16 @@ import 'results_page.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 class QuestionnaireScreen extends StatefulWidget {
-  const QuestionnaireScreen({Key? key}) : super(key: key);
+  final String? elderId;
+  final String? elderName;
+  final String? caregiverId;
+
+  const QuestionnaireScreen({
+    Key? key, 
+    this.elderId,
+    this.elderName,
+    this.caregiverId,
+  }) : super(key: key);
 
   @override
   State<QuestionnaireScreen> createState() => _QuestionnaireScreenState();
@@ -53,56 +62,56 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
 
   // Load questions from JSON file and randomize them
   Future<void> _loadQuestions() async {
-  setState(() {
-    _isLoading = true;
-    _questions = []; // Initialize with empty list
-    _answers = []; // Initialize with empty list
-  });
+    setState(() {
+      _isLoading = true;
+      _questions = []; // Initialize with empty list
+      _answers = []; // Initialize with empty list
+    });
 
-  try {
-    // Add a delay to make the loading animation visible
-    await Future.delayed(const Duration(seconds: 2));
-    
-    // Load the JSON file from assets
-    final String jsonString = await rootBundle.loadString('assest/data/questions.json');
-    
-    // Parse the JSON string
-    final List<dynamic> jsonData = json.decode(jsonString);
-    
-    // Convert JSON to Question objects
-    List<Question> allQuestions = jsonData.map((json) => Question.fromJson(json)).toList();
-    
-    // Randomize the questions
-    allQuestions.shuffle(math.Random());
-    
-    // Take a subset of questions (e.g., 5 random questions)
-    final selectedQuestions = allQuestions.take(5).toList();
-    
-    setState(() {
-      _questions = selectedQuestions;
-      _answers = List.filled(selectedQuestions.length, null);
-      _isLoading = false;
-    });
-    
-    // Initialize progress animation
-    _progressAnimation = Tween<double>(
-      begin: 0,
-      end: 1 / _questions.length,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
-    _animationController.forward();
-  } catch (e) {
-    print('Error loading questions: $e');
-    setState(() {
-      _isLoading = false;
-      _questions = [];
-      _answers = [];
-    });
+    try {
+      // Add a delay to make the loading animation visible
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Load the JSON file from assets
+      final String jsonString = await rootBundle.loadString('assest/data/questions.json');
+      
+      // Parse the JSON string
+      final List<dynamic> jsonData = json.decode(jsonString);
+      
+      // Convert JSON to Question objects
+      List<Question> allQuestions = jsonData.map((json) => Question.fromJson(json)).toList();
+      
+      // Randomize the questions
+      allQuestions.shuffle(math.Random());
+      
+      // Take a subset of questions (e.g., 5 random questions)
+      final selectedQuestions = allQuestions.take(5).toList();
+      
+      setState(() {
+        _questions = selectedQuestions;
+        _answers = List.filled(selectedQuestions.length, null);
+        _isLoading = false;
+      });
+      
+      // Initialize progress animation
+      _progressAnimation = Tween<double>(
+        begin: 0,
+        end: 1 / _questions.length,
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ));
+      
+      _animationController.forward();
+    } catch (e) {
+      print('Error loading questions: $e');
+      setState(() {
+        _isLoading = false;
+        _questions = [];
+        _answers = [];
+      });
+    }
   }
-}
 
   @override
   void dispose() {
@@ -112,34 +121,34 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
   }
 
   void _nextQuestion() {
-  if (_questions.isEmpty) return;
-  
-  if (_currentQuestionIndex < _questions.length - 1) {
-    _animationController.reset();
-    _progressAnimation = Tween<double>(
-      begin: (_currentQuestionIndex + 1) / _questions.length,
-      end: (_currentQuestionIndex + 2) / _questions.length,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    if (_questions.isEmpty) return;
     
-    setState(() {
-      _currentQuestionIndex++;
-    });
-    
-    _pageController.animateToPage(
-      _currentQuestionIndex,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
-    );
-    
-    _animationController.forward();
-  } else {
-    // Calculate score and show results
-    _calculateScore();
+    if (_currentQuestionIndex < _questions.length - 1) {
+      _animationController.reset();
+      _progressAnimation = Tween<double>(
+        begin: (_currentQuestionIndex + 1) / _questions.length,
+        end: (_currentQuestionIndex + 2) / _questions.length,
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ));
+      
+      setState(() {
+        _currentQuestionIndex++;
+      });
+      
+      _pageController.animateToPage(
+        _currentQuestionIndex,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+      
+      _animationController.forward();
+    } else {
+      // Calculate score and show results
+      _calculateScore();
+    }
   }
-}
 
   void _previousQuestion() {
     if (_questions.isEmpty || _currentQuestionIndex <= 0) return;
@@ -194,6 +203,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
           totalQuestions: _questions.length,
           questions: _questions,
           answers: _answers,
+          elderId: widget.elderId,
+          elderName: widget.elderName,
+          caregiverId: widget.caregiverId,
         ),
       ),
     );
@@ -252,7 +264,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
                     },
                   ),
                   Text(
-                    "Mental Health Check-in",
+                    widget.elderName != null ? "${widget.elderName}'s Check-in" : "Mental Health Check-in",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -883,3 +895,4 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> with SingleTi
     );
   }
 }
+
