@@ -54,6 +54,7 @@ dependencies:
   connectivity_plus: ^4.0.2
   firebase_storage: ^12.4.3
   image_picker: ^1.0.1
+  firebase_messaging: ^15.2.3
 
 dev_dependencies:
   flutter_test:
@@ -79,6 +80,7 @@ flutter:
   assets:
     - assest/images/
     - assest/icons/
+    - assest/data/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

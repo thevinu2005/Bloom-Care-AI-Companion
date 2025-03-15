@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bloom_care/widgets/navigation_bar_for_caregiver.dart';
+import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bloom_care/services/notification_service.dart';
@@ -51,8 +51,6 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
     'Social',
     'Cognitive',
     'Household',
-    'Music',
-    'Creative',
     'Other'
   ];
 
@@ -174,21 +172,6 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
         } catch (e) {
           print('Error accessing "$collection" collection: $e');
         }
-      }
-      
-      // If no activities found, add a hardcoded Music activity to match the screenshot
-      if (activities.isEmpty) {
-        print('No activities found, adding hardcoded Music activity');
-        activities.add(Activity(
-          id: 'music1',
-          name: 'Music',
-          time: '2023-03-05',
-          duration: '',
-          description: '',
-          category: 'Creative',
-          isCompleted: false,
-          collectionName: 'activities',
-        ));
       }
       
       setState(() {
@@ -724,10 +707,6 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
         return Colors.orange;
       case 'household':
         return Colors.teal;
-      case 'music':
-        return Colors.indigo;
-      case 'creative':
-        return Colors.pink;
       default:
         return const Color(0xFF6B84DC); // Default color
     }
@@ -746,10 +725,6 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
         return 'psychology';
       case 'household':
         return 'home';
-      case 'music':
-        return 'music_note';
-      case 'creative':
-        return 'palette';
       default:
         return 'event_note'; // Default icon
     }
@@ -1146,8 +1121,7 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
                 ),
               ),
             ),
-      // Ensure the BottomNav_for_caregivers widget is used correctly in the build method
-      bottomNavigationBar: const BottomNav_for_caregivers(currentIndex: -1),
+      bottomNavigationBar: const BottomNav(currentIndex: -1),
     );
   }
 
@@ -1373,10 +1347,6 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
         return Icons.psychology;
       case 'household':
         return Icons.home;
-      case 'music':
-        return Icons.music_note;
-      case 'creative':
-        return Icons.palette;
       default:
         return Icons.event_note;
     }
@@ -1415,4 +1385,3 @@ class Activity {
           'Sun': false,
         };
 }
-

@@ -6,7 +6,7 @@ import 'package:bloom_care/widgets/navigation_bar.dart';
 import 'package:bloom_care/screens/emotion_check/emotion_check.dart';
 import 'package:bloom_care/screens/hobby_medicine_activity/activity_page.dart';
 import 'dart:math';
-import 'package:bloom_care/screens/mental_health_check_ins/mental_health_check_ins.dart';
+import 'package:bloom_care/screens/mental_health_check_ins/questionstart_page.dart';
 
 
 class BloomCareHomePage extends StatefulWidget {
@@ -598,7 +598,7 @@ class _BloomCareHomePageState extends State<BloomCareHomePage> {
       child: InkWell(
         onTap: () {
           Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MentalHealthStartPage()),
+          MaterialPageRoute(builder: (context) => const QuizWelcomeScreen()),
          );
         },
         borderRadius: BorderRadius.circular(16),

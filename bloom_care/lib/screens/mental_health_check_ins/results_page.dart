@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'questionstart_page.dart';
 import 'package:bloom_care/models/question.dart';
+import 'package:bloom_care/services/notification_service.dart';
 
-class ResultsPage extends StatelessWidget {
+class ResultsPage extends StatefulWidget {
   final int score;
   final int totalQuestions;
   final List<Question> questions;
   final List<int?> answers;
+  final String? elderId;
+  final String? elderName;
+  final String? caregiverId;
 
   const ResultsPage({
     Key? key,
@@ -14,11 +20,75 @@ class ResultsPage extends StatelessWidget {
     required this.totalQuestions,
     required this.questions,
     required this.answers,
+    this.elderId,
+    this.elderName,
+    this.caregiverId,
   }) : super(key: key);
 
   @override
+  State<ResultsPage> createState() => _ResultsPageState();
+}
+
+class _ResultsPageState extends State<ResultsPage> {
+  final NotificationService _notificationService = NotificationService();
+  bool _resultsSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _saveResults();
+  }
+
+  Future<void> _saveResults() async {
+    if (_resultsSaved) return;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final percentage = (widget.score / widget.totalQuestions) * 100;
+      final elderName = widget.elderName ?? 'Elder';
+      
+      // Save results to Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.elderId ?? user.uid)
+          .collection('checkIns')
+          .add({
+        'score': widget.score,
+        'totalQuestions': widget.totalQuestions,
+        'timestamp': FieldValue.serverTimestamp(),
+        'percentage': percentage.toStringAsFixed(0),
+      });
+
+      // Notify caregiver if available
+      if (widget.caregiverId != null && widget.caregiverId!.isNotEmpty) {
+        // Get mental health status based on score
+        String mentalHealthStatus = percentage >= 80 
+            ? "excellent" 
+            : percentage >= 60 
+                ? "good" 
+                : "needs attention";
+
+        // Send notification to caregiver
+        await _notificationService.notifyCaregiverAboutElderActivity(
+          activityType: 'mental_health',
+          activityName: 'Weekly Check-in',
+          activityDetails: 'Score: ${widget.score}/${widget.totalQuestions} (${percentage.toStringAsFixed(0)}%) - Mental health status: $mentalHealthStatus',
+        );
+      }
+
+      setState(() {
+        _resultsSaved = true;
+      });
+    } catch (e) {
+      print('Error saving results: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final percentage = (score / totalQuestions) * 100;
+    final percentage = (widget.score / widget.totalQuestions) * 100;
     final Color resultColor = percentage >= 80 
         ? Colors.green 
         : percentage >= 60 
@@ -48,13 +118,14 @@ class ResultsPage extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  const Text(
-                    "Check-in Results",
-                    style: TextStyle(
+                  Text(
+                    widget.elderName != null ? "${widget.elderName}'s Check-in Results" : "Check-in Results",
+                    style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
                   TweenAnimationBuilder(
@@ -97,7 +168,7 @@ class ResultsPage extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                "$score/$totalQuestions",
+                                "${widget.score}/${widget.totalQuestions}",
                                 style: const TextStyle(
                                   fontSize: 18,
                                   color: Colors.white,
@@ -131,10 +202,10 @@ class ResultsPage extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: questions.length,
+                itemCount: widget.questions.length,
                 itemBuilder: (context, index) {
-                  final question = questions[index];
-                  final userAnswer = answers[index];
+                  final question = widget.questions[index];
+                  final userAnswer = widget.answers[index];
                   final correctAnswer = question.correctAnswer;
                   final isCorrect = userAnswer == correctAnswer;
                   
@@ -227,7 +298,11 @@ class ResultsPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
-                      builder: (context) => const QuizWelcomeScreen(justCompleted: true)
+                      builder: (context) => QuizWelcomeScreen(
+                        justCompleted: true,
+                        score: widget.score.toString(),
+                        totalQuestions: widget.totalQuestions,
+                      )
                     ),
                     (route) => false, // Remove all previous routes
                   );
