@@ -45,6 +45,7 @@ class DefaultFirebaseOptions {
     appId: '1:276520827269:android:362f54269aca6c51b36cec',
     messagingSenderId: '276520827269',
     projectId: 'bloomcarenew',
+    databaseURL: 'https://bloomcarenew-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'bloomcarenew.firebasestorage.app',
   );
 
@@ -53,6 +54,7 @@ class DefaultFirebaseOptions {
     appId: '1:276520827269:ios:934524c83abdc462b36cec',
     messagingSenderId: '276520827269',
     projectId: 'bloomcarenew',
+    databaseURL: 'https://bloomcarenew-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'bloomcarenew.firebasestorage.app',
     iosBundleId: 'com.example.bloomCare',
   );
@@ -63,6 +65,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '276520827269',
     projectId: 'bloomcarenew',
     authDomain: 'bloomcarenew.firebaseapp.com',
+    databaseURL: 'https://bloomcarenew-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'bloomcarenew.firebasestorage.app',
     measurementId: 'G-4X4WXQJJFV',
   );
@@ -72,6 +75,7 @@ class DefaultFirebaseOptions {
     appId: '1:276520827269:ios:934524c83abdc462b36cec',
     messagingSenderId: '276520827269',
     projectId: 'bloomcarenew',
+    databaseURL: 'https://bloomcarenew-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'bloomcarenew.firebasestorage.app',
     iosBundleId: 'com.example.bloomCare',
   );
@@ -82,6 +86,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '276520827269',
     projectId: 'bloomcarenew',
     authDomain: 'bloomcarenew.firebaseapp.com',
+    databaseURL: 'https://bloomcarenew-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'bloomcarenew.firebasestorage.app',
     measurementId: 'G-LV91TKZSXB',
   );

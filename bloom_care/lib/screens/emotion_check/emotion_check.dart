@@ -517,7 +517,9 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF6B84DC),
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
+        bottom: false,  // Don't apply bottom padding since we handle it manually
         child: Column(
           children: [
             Padding(
@@ -564,49 +566,54 @@ class _EmotionCheckState extends State<EmotionCheck> with SingleTickerProviderSt
             ),
 
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_showAvatar)
-                    Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assest/images/grandma.png',
-                          fit: BoxFit.cover,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(height: 20),
+                    if (_showAvatar)
+                      Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
                         ),
-                      ),
-                    ),
-                  if (_isAnalyzing)
-                    Column(
-                      children: const [
-                        CircularProgressIndicator(color: Colors.white),
-                        SizedBox(height: 20),
-                        Text(
-                          'Analyzing your mood...',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assest/images/grandma.png',
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      ],
-                    ),
-                  if (_showResults)
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: _buildEmotionResults(),
-                    ),
-                ],
+                      ),
+                    if (_isAnalyzing)
+                      Column(
+                        children: const [
+                          CircularProgressIndicator(color: Colors.white),
+                          SizedBox(height: 20),
+                          Text(
+                            'Analyzing your mood...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (_showResults)
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: _buildEmotionResults(),
+                      ),
+                    SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
 
             Padding(
-              padding: const EdgeInsets.only(bottom: 100),
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

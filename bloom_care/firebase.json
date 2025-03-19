@@ -1,1 +1,39 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"bloomcarenew","appId":"1:276520827269:android:362f54269aca6c51b36cec","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"bloomcarenew","configurations":{"android":"1:276520827269:android:362f54269aca6c51b36cec","ios":"1:276520827269:ios:934524c83abdc462b36cec","macos":"1:276520827269:ios:934524c83abdc462b36cec","web":"1:276520827269:web:c522008e816163fab36cec","windows":"1:276520827269:web:895a925fa378807fb36cec"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bloomcarenew",
+          "appId": "1:276520827269:android:362f54269aca6c51b36cec",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bloomcarenew",
+          "configurations": {
+            "android": "1:276520827269:android:362f54269aca6c51b36cec",
+            "ios": "1:276520827269:ios:934524c83abdc462b36cec"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ]
+}
