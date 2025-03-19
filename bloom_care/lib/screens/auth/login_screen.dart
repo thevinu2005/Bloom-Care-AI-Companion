@@ -474,7 +474,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     child: TextButton(
                                       onPressed: _isLoading ? null : () {
                                         Navigator.of(context).push(
-                                          MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                                          MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
                                         );
                                       },
                                       child: const Text(

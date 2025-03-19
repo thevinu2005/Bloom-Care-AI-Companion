@@ -1,49 +1,201 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bloom_care/screens/auth/login_screen.dart';
+import 'package:bloom_care/screens/auth/auth_service.dart';
 
-class ForgotPasswordPage extends StatefulWidget {
-  const ForgotPasswordPage({Key? key}) : super(key: key);
+class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({Key? key}) : super(key: key);
 
   @override
-  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  // Define the possible states for the password reset flow
+  int _currentStep = 0; // 0: email, 1: verification code, 2: new password, 3: success
+  
+  // Form keys for validation
   final _formKey = GlobalKey<FormState>();
+  
+  // Text controllers
   final _emailController = TextEditingController();
+  final List<TextEditingController> _codeControllers = List.generate(6, (_) => TextEditingController());
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  
+  // Focus nodes for verification code
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  
+  // Loading state
   bool _isLoading = false;
-  bool _resetSent = false;
+  
+  // Password visibility
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  
+  // Firebase auth
   final _auth = FirebaseAuth.instance;
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
-
-    _controller.forward();
-  }
-
-  @override
   void dispose() {
-    _controller.dispose();
     _emailController.dispose();
+    for (var controller in _codeControllers) {
+      controller.dispose();
+    }
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
+  // Send verification code to email
+  Future<void> _sendVerificationCode() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final authService = AuthService();
+        final email = _emailController.text.trim();
+        
+        // This would actually send an email in a real app
+        // For testing, it returns the code
+        final code = await authService.sendPasswordResetCode(email);
+        
+        // For testing purposes only - in a real app, you wouldn't show this
+        print('Verification code: $code'); // Remove in production
+        
+        setState(() {
+          _isLoading = false;
+          _currentStep = 1; // Move to verification code step
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification code sent to your email'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send verification code: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Resend verification code
+  Future<void> _resendCode() async {
+    // Clear existing code fields
+    for (var controller in _codeControllers) {
+      controller.clear();
+    }
+    
+    // Focus on first field
+    if (_focusNodes.isNotEmpty) {
+      _focusNodes[0].requestFocus();
+    }
+    
+    // Resend code
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // In a real implementation, you would call your service to resend a verification code
+      await Future.delayed(const Duration(seconds: 2));
+      
+      setState(() {
+        _isLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Verification code resent to your email'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to resend verification code: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Verify the code entered by user
+  Future<void> _verifyCode() async {
+    // Check if all code fields are filled
+    bool isValid = true;
+    for (var controller in _codeControllers) {
+      if (controller.text.isEmpty) {
+        isValid = false;
+        break;
+      }
+    }
+    
+    if (!isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter all digits of the verification code'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Combine the code from all text fields
+      final code = _codeControllers.map((controller) => controller.text).join();
+      final email = _emailController.text.trim();
+      
+      final authService = AuthService();
+      final isValid = await authService.verifyPasswordResetCode(email, code);
+      
+      if (isValid) {
+        setState(() {
+          _isLoading = false;
+          _currentStep = 2; // Move to new password step
+        });
+      } else {
+        throw Exception('Invalid verification code');
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Verification failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Reset password with new password
   Future<void> _resetPassword() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -51,57 +203,60 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
       });
 
       try {
-        // Send password reset email
-        await _auth.sendPasswordResetEmail(
-          email: _emailController.text.trim(),
-        );
-
-        // If successful, show success state
+        final authService = AuthService();
+        final email = _emailController.text.trim();
+        final newPassword = _passwordController.text;
+        
+        await authService.resetPassword(email, newPassword);
+        
         setState(() {
           _isLoading = false;
-          _resetSent = true;
+          _currentStep = 3; // Move to success step
         });
-      } on FirebaseAuthException catch (e) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        // Show error message based on the error code
-        String errorMessage;
-        switch (e.code) {
-          case 'invalid-email':
-            errorMessage = 'The email address is not valid.';
-            break;
-          case 'user-not-found':
-            errorMessage = 'No user found with this email address.';
-            break;
-          default:
-            errorMessage = 'An error occurred. Please try again later.';
-        }
-
-        // Show error message to user
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
       } catch (e) {
         setState(() {
           _isLoading = false;
         });
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('An unexpected error occurred. Please try again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reset password: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    }
+  }
+
+  // Get screen title based on current step
+  String _getScreenTitle() {
+    switch (_currentStep) {
+      case 0:
+        return 'Forgot Password';
+      case 1:
+        return 'Verification Code';
+      case 2:
+        return 'New Password';
+      case 3:
+        return 'Success';
+      default:
+        return 'Forgot Password';
+    }
+  }
+
+  // Get screen subtitle based on current step
+  String _getScreenSubtitle() {
+    switch (_currentStep) {
+      case 0:
+        return 'Enter your email and we\'ll send you a verification code';
+      case 1:
+        return 'Enter the verification code sent to ${_emailController.text}';
+      case 2:
+        return 'Create a new password for your account';
+      case 3:
+        return 'Your password has been reset successfully';
+      default:
+        return 'Enter your email and we\'ll send you a verification code';
     }
   }
 
@@ -142,12 +297,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
                         children: [
                           IconButton(
                             icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
-                            onPressed: () => Navigator.of(context).pop(),
+                            onPressed: () {
+                              if (_currentStep == 0) {
+                                Navigator.of(context).pop();
+                              } else {
+                                setState(() {
+                                  _currentStep--;
+                                });
+                              }
+                            },
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            'Forgot Password',
-                            style: TextStyle(
+                          Text(
+                            _getScreenTitle(),
+                            style: const TextStyle(
                               fontSize: 40,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -155,9 +318,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Enter your email and we\'ll send you a link to reset your password',
-                            style: TextStyle(
+                          Text(
+                            _getScreenSubtitle(),
+                            style: const TextStyle(
                               fontSize: 16,
                               color: Colors.white70,
                               fontFamily: 'PlayfairDisplay',
@@ -178,112 +341,19 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
                       ),
                       child: Column(
                         children: [
-                          const SizedBox(height: 120),
+                          const SizedBox(height: 30),
                           Image.asset(
-                            'assets/images/forgot_password.png',
+                            'assest/images/signup.png',
                             height: 200,
                             fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Image.asset(
-                                'assest/images/signup.png',
-                                height: 200,
-                                fit: BoxFit.contain,
-                              );
-                            },
                           ),
                           const SizedBox(height: 30),
                           Padding(
                             padding: const EdgeInsets.all(24.0),
-                            child: _resetSent 
-                              ? _buildSuccessMessage() 
-                              : Form(
-                                key: _formKey,
-                                child: Column(
-                                  children: [
-                                    TextFormField(
-                                      controller: _emailController,
-                                      keyboardType: TextInputType.emailAddress,
-                                      textInputAction: TextInputAction.done,
-                                      style: const TextStyle(color: Colors.black87),
-                                      decoration: InputDecoration(
-                                        labelText: 'Email',
-                                        labelStyle: const TextStyle(color: Colors.black87),
-                                        prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF6B84DC)),
-                                        hintText: 'Enter your email',
-                                        hintStyle: TextStyle(color: Colors.grey.shade400),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: const BorderSide(color: Color(0xFF6B84DC)),
-                                        ),
-                                        errorBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: const BorderSide(color: Colors.redAccent),
-                                        ),
-                                        focusedErrorBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: const BorderSide(color: Colors.redAccent),
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.grey.shade50,
-                                      ),
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Please enter your email';
-                                        }
-                                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                                          return 'Please enter a valid email';
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                    const SizedBox(height: 40),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      height: 56,
-                                      child: ElevatedButton(
-                                        onPressed: _isLoading ? null : _resetPassword,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF6B84DC),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
-                                        ),
-                                        child: _isLoading
-                                          ? const CircularProgressIndicator(color: Colors.white)
-                                          : const Text(
-                                              'Reset Password',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pushReplacement(
-                                          MaterialPageRoute(builder: (context) => const LoginPage()),
-                                        );
-                                      },
-                                      child: const Text(
-                                        'Back to Login',
-                                        style: TextStyle(
-                                          color: Color(0xFF6B84DC),
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            child: Form(
+                              key: _formKey,
+                              child: _buildCurrentStepWidget(),
+                            ),
                           ),
                         ],
                       ),
@@ -298,6 +368,350 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
     );
   }
 
+  // Build widget based on current step
+  Widget _buildCurrentStepWidget() {
+    switch (_currentStep) {
+      case 0:
+        return _buildEmailInputForm();
+      case 1:
+        return _buildVerificationCodeForm();
+      case 2:
+        return _buildNewPasswordForm();
+      case 3:
+        return _buildSuccessMessage();
+      default:
+        return _buildEmailInputForm();
+    }
+  }
+
+  // Email input form
+  Widget _buildEmailInputForm() {
+    return Column(
+      children: [
+        TextFormField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          style: const TextStyle(color: Colors.black87),
+          decoration: InputDecoration(
+            labelText: 'Email',
+            labelStyle: const TextStyle(color: Colors.black87),
+            prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF6B84DC)),
+            hintText: 'Enter your email',
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF6B84DC)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter your email';
+            }
+            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+              return 'Please enter a valid email';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 40),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _sendVerificationCode,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6B84DC),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: _isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text(
+                  'Send Verification Code',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const LoginPage()),
+            );
+          },
+          child: const Text(
+            'Back to Login',
+            style: TextStyle(
+              color: Color(0xFF6B84DC),
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Verification code form
+  Widget _buildVerificationCodeForm() {
+    return Column(
+      children: [
+        const Text(
+          'Enter 6-digit code',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(
+            6,
+            (index) => SizedBox(
+              width: 40,
+              child: TextField(
+                controller: _codeControllers[index],
+                focusNode: _focusNodes[index],
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 20),
+                decoration: InputDecoration(
+                  contentPadding: EdgeInsets.zero,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFF6B84DC)),
+                  ),
+                ),
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(1),
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+                onChanged: (value) {
+                  if (value.isNotEmpty && index < 5) {
+                    _focusNodes[index + 1].requestFocus();
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 40),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _verifyCode,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6B84DC),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: _isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text(
+                  'Verify Code',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "Didn't receive the code? ",
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: 14,
+              ),
+            ),
+            TextButton(
+              onPressed: _isLoading ? null : _resendCode,
+              child: const Text(
+                'Resend',
+                style: TextStyle(
+                  color: Color(0xFF6B84DC),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // New password form
+  Widget _buildNewPasswordForm() {
+    return Column(
+      children: [
+        TextFormField(
+          controller: _passwordController,
+          obscureText: _obscurePassword,
+          textInputAction: TextInputAction.next,
+          style: const TextStyle(color: Colors.black87),
+          decoration: InputDecoration(
+            labelText: 'New Password',
+            labelStyle: const TextStyle(color: Colors.black87),
+            prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF6B84DC)),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                color: Colors.grey,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
+            hintText: 'Enter your new password',
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF6B84DC)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter a password';
+            }
+            if (value.length < 6) {
+              return 'Password must be at least 6 characters';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 20),
+        TextFormField(
+          controller: _confirmPasswordController,
+          obscureText: _obscureConfirmPassword,
+          textInputAction: TextInputAction.done,
+          style: const TextStyle(color: Colors.black87),
+          decoration: InputDecoration(
+            labelText: 'Confirm Password',
+            labelStyle: const TextStyle(color: Colors.black87),
+            prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF6B84DC)),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                color: Colors.grey,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                });
+              },
+            ),
+            hintText: 'Confirm your new password',
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF6B84DC)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please confirm your password';
+            }
+            if (value != _passwordController.text) {
+              return 'Passwords do not match';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 40),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _resetPassword,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6B84DC),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: _isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text(
+                  'Reset Password',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Success message
   Widget _buildSuccessMessage() {
     return Column(
       children: [
@@ -308,7 +722,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
         ),
         const SizedBox(height: 20),
         const Text(
-          'Reset Link Sent!',
+          'Password Reset Successful!',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -316,9 +730,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
           ),
         ),
         const SizedBox(height: 16),
-        Text(
-          'We\'ve sent a password reset link to ${_emailController.text}. Please check your email and follow the instructions.',
-          style: const TextStyle(
+        const Text(
+          'Your password has been reset successfully. You can now log in with your new password.',
+          style: TextStyle(
             fontSize: 16,
             color: Colors.black54,
           ),
@@ -342,7 +756,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
             child: const Text(
-              'Back to Login',
+              'Go to Login',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -355,3 +769,4 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> with SingleTick
     );
   }
 }
+
